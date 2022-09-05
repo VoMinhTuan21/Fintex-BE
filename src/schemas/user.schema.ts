@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongodb';
 import mongoose from 'mongoose';
-import { Gender } from 'src/types';
+import { Gender } from '../types/enums';
 import { EducationDocument } from './education.schema';
 import { PostDocument } from './post.schema';
 
@@ -46,6 +46,11 @@ export class User {
         required: true,
     })
     email: string;
+
+    @Prop({
+        type: String,
+    })
+    password: string;
 
     @Prop({
         type: String,

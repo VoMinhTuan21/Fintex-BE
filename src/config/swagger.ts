@@ -5,8 +5,8 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 export const initSwagger = (app: INestApplication) => {
     const config = new ConfigService();
     const swaggerConfig = new DocumentBuilder()
-        .setTitle('Tinhim API Document')
-        .setDescription('Description of Tinhim API clone app')
+        .setTitle('Fintex API Document')
+        .setDescription('Description of Fintex social media')
         .addServer(config.get('SWAGGER_API_SERVER'))
         .addBearerAuth()
         .build();

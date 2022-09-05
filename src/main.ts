@@ -8,6 +8,8 @@ async function bootstrap() {
     const app = await NestFactory.create(AppModule);
     const config = app.get(ConfigService);
     app.enableCors();
+    app.setGlobalPrefix('api/v1');
+
     initSwagger(app);
 
     app.useGlobalPipes(
@@ -19,6 +21,7 @@ async function bootstrap() {
     const SWAGGER_API_SERVER = config.get<string>('SWAGGER_API_SERVER');
     const PORT = config.get<string>('PORT');
     await app.listen(PORT);
-    console.log(`Server is running on: ${SWAGGER_API_SERVER}`);
+    console.log(`[⚡Server] Server is running on: ${SWAGGER_API_SERVER}/api/v1`);
+    console.log(`[⚡Server] Swagger is running on: ${SWAGGER_API_SERVER}/swagger`);
 }
 bootstrap();
