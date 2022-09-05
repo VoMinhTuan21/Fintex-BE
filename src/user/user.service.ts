@@ -20,7 +20,7 @@ export class UserService {
                 email,
                 gender,
                 name,
-                hashPass,
+                password: hashPass,
                 phone,
             });
         } catch (error) {
