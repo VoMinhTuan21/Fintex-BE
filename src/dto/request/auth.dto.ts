@@ -59,3 +59,20 @@ export class AuthSignUpDto {
     @IsNotEmpty()
     birthday: Date;
 }
+
+export class AuthSignInWithPhoneDto {
+    @ApiProperty({ type: String })
+    @IsNumberString()
+    @IsNotEmpty()
+    @Length(10)
+    @Matches(/(((\+|)84)|0)(3|5|7|8|9)+([0-9]{8})\b/, { message: 'Malformed phone number' })
+    phone: string;
+
+    @ApiProperty({ type: String, default: '123456789' })
+    @IsNotEmpty()
+    @Matches(/^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/, {
+        message:
+            'Password must contain at least 1 letter, 1 number, 1 special character, and be at least 8 characters long',
+    })
+    password: string;
+}

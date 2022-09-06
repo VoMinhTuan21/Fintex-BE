@@ -1,1 +1,0 @@
-export const ERROR_CREATE_USER = 'ERROR_CREATE_USER';

@@ -18,6 +18,7 @@ async function bootstrap() {
             forbidNonWhitelisted: true,
         }),
     );
+
     const SWAGGER_API_SERVER = config.get<string>('SWAGGER_API_SERVER');
     const PORT = config.get<string>('PORT');
     await app.listen(PORT);

@@ -1,7 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { ERROR_CREATE_USER } from '../constances/responseMessage';
+import { ERROR_CREATE_USER } from '../constances';
 import { handleResponse } from '../dto/response';
 import { User, UserDocument } from '../schemas/user.schema';
 import { hashPasswords } from '../utils';
@@ -31,5 +31,9 @@ export class UserService {
                 statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
             });
         }
+    }
+
+    async findByPhone(phone: string): Promise<UserDocument> {
+        return await this.userModel.findOne({ phone: phone });
     }
 }
