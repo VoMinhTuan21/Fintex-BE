@@ -2,7 +2,7 @@ declare interface IUserSignUp {
     name: IName;
     email: string;
     phone: string;
-    birthday: Date;
+    birthday: string;
     gender: Gender;
     password: string;
 }

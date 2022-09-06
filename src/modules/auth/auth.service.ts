@@ -3,7 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import {
     ERROR_CREATE_USER,
+    ERROR_EMAIL_HAS_BEEN_USED,
     ERROR_PASSWORD_NOT_CORRECT,
+    ERROR_PHONE_HAS_BEEN_USED,
     ERROR_SIGN_IN_WITH_PHONE,
     ERROR_USER_NOT_FOUND,
     ERROR_VERIFY_USER,
@@ -19,7 +21,7 @@ import { Mapper } from '@automapper/core';
 import { User } from '../../schemas/user.schema';
 import { InjectMapper } from '@automapper/nestjs';
 import { AuthVerifyUserDto } from '../../dto/request';
-import { getAuth, GoogleAuthProvider, OAuthCredential, signInWithCredential, UserCredential } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { app } from '../../config/firebase';
 
 @Injectable()
@@ -66,6 +68,22 @@ export class AuthService {
 
     async signUp(userSignup: IUserSignUp) {
         try {
+            const userEmail = await this.userService.findByEmail(userSignup.email);
+            if (userEmail) {
+                return handleResponse({
+                    error: ERROR_EMAIL_HAS_BEEN_USED,
+                    statusCode: HttpStatus.BAD_REQUEST,
+                });
+            }
+
+            const userPhone = await this.userService.findByPhone(userSignup.phone);
+            if (userPhone) {
+                return handleResponse({
+                    error: ERROR_PHONE_HAS_BEEN_USED,
+                    statusCode: HttpStatus.BAD_REQUEST,
+                });
+            }
+
             const newUser = await this.userService.create(userSignup);
             if (!newUser) {
                 return handleResponse({

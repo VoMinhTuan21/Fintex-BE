@@ -54,10 +54,10 @@ export class AuthSignUpDto {
     @IsEnum(Gender)
     gender: Gender;
 
-    @ApiProperty({ type: Date, default: '2001-01-01' })
+    @ApiProperty({ type: String, default: '2001-01-01' })
     @IsDateString()
     @IsNotEmpty()
-    birthday: Date;
+    birthday: string;
 }
 
 export class AuthSignInWithPhoneDto {
