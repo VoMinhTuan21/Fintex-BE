@@ -1,6 +1,6 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { AuthSignInWithPhoneDto, AuthSignUpDto, AuthVerifyUserDto } from '../../dto/request';
+import { AuthSignInWithPhoneDto, AuthSignUpDto, AuthVerifyUserDto, CheckUserWithPhoneDto } from '../../dto/request';
 import { AuthService } from './auth.service';
 
 @ApiTags('Auth')
@@ -21,5 +21,10 @@ export class AuthController {
     @Post('verify-user')
     async verifyUser(@Body() dto: AuthVerifyUserDto) {
         return await this.authService.verfiyUser(dto);
+    }
+
+    @Post('/check-user-with-phone')
+    async checkUserWithPhone(@Body() dto: CheckUserWithPhoneDto) {
+        return await this.authService.checkUserWithPhone(dto);
     }
 }

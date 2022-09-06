@@ -90,3 +90,9 @@ export class AuthVerifyUserDto {
     @IsNotEmpty()
     idToken: string;
 }
+
+export class CheckUserWithPhoneDto {
+    @ApiProperty({ type: String })
+    @IsNotEmpty()
+    phone: string;
+}

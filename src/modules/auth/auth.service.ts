@@ -2,6 +2,7 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import {
+    ERROR_CHECK_USER_WITH_PHONE,
     ERROR_CREATE_USER,
     ERROR_EMAIL_HAS_BEEN_USED,
     ERROR_PASSWORD_NOT_CORRECT,
@@ -20,7 +21,7 @@ import { comparePassword } from '../../utils';
 import { Mapper } from '@automapper/core';
 import { User } from '../../schemas/user.schema';
 import { InjectMapper } from '@automapper/nestjs';
-import { AuthVerifyUserDto } from '../../dto/request';
+import { AuthVerifyUserDto, CheckUserWithPhoneDto } from '../../dto/request';
 import { getAuth, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
 import { app } from '../../config/firebase';
 
@@ -146,6 +147,33 @@ export class AuthService {
         } catch (error) {
             return handleResponse({
                 error: error.response?.error || ERROR_VERIFY_USER,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async checkUserWithPhone(dto: CheckUserWithPhoneDto) {
+        try {
+            const user = await this.userService.findByPhone(dto.phone);
+
+            if (user) {
+                return handleResponse({
+                    message: USER_EXISTED,
+                    data: {
+                        isExisted: true,
+                    },
+                });
+            } else {
+                return handleResponse({
+                    message: USER_NOT_EXISTED,
+                    data: {
+                        isExisted: false,
+                    },
+                });
+            }
+        } catch (error) {
+            return handleResponse({
+                error: error.response?.error || ERROR_CHECK_USER_WITH_PHONE,
                 statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
             });
         }
