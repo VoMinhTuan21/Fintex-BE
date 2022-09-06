@@ -4,6 +4,7 @@ import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import * as Joi from 'joi';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AppConfig } from './utils/app-config';
 
 @Module({
     imports: [
@@ -26,6 +27,6 @@ import { MongooseModule } from '@nestjs/mongoose';
         AuthModule,
     ],
     controllers: [],
-    providers: [],
+    providers: [AppConfig],
 })
 export class AppModule {}

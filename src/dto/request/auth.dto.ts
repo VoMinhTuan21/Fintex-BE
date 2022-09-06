@@ -76,3 +76,17 @@ export class AuthSignInWithPhoneDto {
     })
     password: string;
 }
+
+export class AuthVerifyUserDto {
+    @ApiProperty({ type: Object })
+    @IsNotEmpty()
+    user: {
+        name: string;
+        phone: string;
+        avatar: string;
+        email: string;
+    };
+    @ApiProperty({ type: String })
+    @IsNotEmpty()
+    idToken: string;
+}

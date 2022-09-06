@@ -5,11 +5,17 @@ import {
     ERROR_PASSWORD_NOT_CORRECT,
     ERROR_SIGN_IN_WITH_PHONE,
     ERROR_USER_NOT_FOUND,
+    ERROR_VERIFY_USER,
     SIGN_IN_SUCCESSFULLY,
+    USER_EXISTED,
+    USER_NOT_EXISTED,
 } from '../../constances';
 import { handleResponse } from '../../dto/response';
 import { UserService } from '../user/user.service';
 import { comparePassword } from '../../utils';
+import { AuthVerifyUserDto } from '../../dto/request';
+import { getAuth, GoogleAuthProvider, OAuthCredential, signInWithCredential, UserCredential } from 'firebase/auth';
+import { app } from '../../config/firebase';
 
 @Injectable()
 export class AuthService {
@@ -63,5 +69,36 @@ export class AuthService {
             expiresIn: this.config.get<string>('JWT_EXPIRATION_TIME'),
             secret,
         });
+    }
+
+    async verfiyUser(dto: AuthVerifyUserDto) {
+        try {
+            const auth = getAuth(app);
+            const credential = GoogleAuthProvider.credential(dto.idToken);
+            const result = await signInWithCredential(auth, credential);
+
+            const user = await this.userService.findByEmail(result.user.email);
+            if (user) {
+                return handleResponse({
+                    message: USER_EXISTED,
+                    data: {
+                        isExisted: true,
+                        phone: user.phone,
+                    },
+                });
+            } else {
+                return handleResponse({
+                    message: USER_NOT_EXISTED,
+                    data: {
+                        isExisted: false,
+                    },
+                });
+            }
+        } catch (error) {
+            return handleResponse({
+                error: error.response?.error || ERROR_VERIFY_USER,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
     }
 }
