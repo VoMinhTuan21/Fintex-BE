@@ -10,27 +10,18 @@ import { hashPasswords } from '../../utils';
 export class UserService {
     constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
-    async create(userSignup: IUserSignUp) {
-        try {
-            const { birthday, email, gender, name, password, phone } = userSignup;
-            const hashPass = hashPasswords(password);
+    async create(userSignup: IUserSignUp): Promise<UserDocument> {
+        const { birthday, email, gender, name, password, phone } = userSignup;
+        const hashPass = hashPasswords(password);
 
-            return await this.userModel.create({
-                birthday,
-                email,
-                gender,
-                name,
-                password: hashPass,
-                phone,
-            });
-        } catch (error) {
-            console.log('error: ', error);
-
-            return handleResponse({
-                error: error.response?.error || ERROR_CREATE_USER,
-                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
-            });
-        }
+        return await this.userModel.create({
+            birthday,
+            email,
+            gender,
+            name,
+            password: hashPass,
+            phone,
+        });
     }
 
     async findByPhone(phone: string): Promise<UserDocument> {

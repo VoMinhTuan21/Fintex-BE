@@ -2,17 +2,22 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import {
+    ERROR_CREATE_USER,
     ERROR_PASSWORD_NOT_CORRECT,
     ERROR_SIGN_IN_WITH_PHONE,
     ERROR_USER_NOT_FOUND,
     ERROR_VERIFY_USER,
     SIGN_IN_SUCCESSFULLY,
+    SIGN_UP_SUCCESSFULLY,
     USER_EXISTED,
     USER_NOT_EXISTED,
 } from '../../constances';
-import { handleResponse } from '../../dto/response';
+import { handleResponse, UserResDto } from '../../dto/response';
 import { UserService } from '../user/user.service';
 import { comparePassword } from '../../utils';
+import { Mapper } from '@automapper/core';
+import { User } from '../../schemas/user.schema';
+import { InjectMapper } from '@automapper/nestjs';
 import { AuthVerifyUserDto } from '../../dto/request';
 import { getAuth, GoogleAuthProvider, OAuthCredential, signInWithCredential, UserCredential } from 'firebase/auth';
 import { app } from '../../config/firebase';
@@ -21,6 +26,7 @@ import { app } from '../../config/firebase';
 export class AuthService {
     constructor(
         @Inject(ConfigService) private config: ConfigService,
+        @InjectMapper() private readonly mapper: Mapper,
         private readonly userService: UserService,
         private jwtService: JwtService,
     ) {}
@@ -47,12 +53,37 @@ export class AuthService {
                 message: SIGN_IN_SUCCESSFULLY,
                 data: {
                     token: await this.signJWTToken(user._id, user.email, user.phone),
-                    user,
+                    user: this.mapper.map(user, User, UserResDto),
                 },
             });
         } catch (error) {
             return handleResponse({
                 error: error.response?.error || ERROR_SIGN_IN_WITH_PHONE,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async signUp(userSignup: IUserSignUp) {
+        try {
+            const newUser = await this.userService.create(userSignup);
+            if (!newUser) {
+                return handleResponse({
+                    error: ERROR_CREATE_USER,
+                    statusCode: HttpStatus.BAD_REQUEST,
+                });
+            }
+
+            return handleResponse({
+                message: SIGN_UP_SUCCESSFULLY,
+                data: {
+                    token: await this.signJWTToken(newUser._id, newUser.email, newUser.phone),
+                    user: this.mapper.map(newUser, User, UserResDto),
+                },
+            });
+        } catch (error) {
+            return handleResponse({
+                error: error.response?.error || ERROR_CREATE_USER,
                 statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
             });
         }
