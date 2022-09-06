@@ -1,6 +1,6 @@
 import { Body, Controller, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { AuthSignInWithPhoneDto, AuthSignUpDto } from '../dto';
+import { AuthSignInWithPhoneDto, AuthSignUpDto } from '../../dto';
 import { UserService } from '../user/user.service';
 import { AuthService } from './auth.service';
 

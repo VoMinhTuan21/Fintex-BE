@@ -6,10 +6,10 @@ import {
     ERROR_SIGN_IN_WITH_PHONE,
     ERROR_USER_NOT_FOUND,
     SIGN_IN_SUCCESSFULLY,
-} from '../constances';
-import { handleResponse } from '../dto/response';
+} from '../../constances';
+import { handleResponse } from '../../dto/response';
 import { UserService } from '../user/user.service';
-import { comparePassword } from '../utils';
+import { comparePassword } from '../../utils';
 
 @Injectable()
 export class AuthService {
