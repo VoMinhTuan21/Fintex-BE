@@ -1,12 +1,17 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { UserModule } from './modules/user/user.module';
-import { AuthModule } from './modules/auth/auth.module';
+import { UserModule } from './user/user.module';
+import { AuthModule } from './auth/auth.module';
 import * as Joi from 'joi';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AutomapperModule } from '@automapper/nestjs';
+import { classes } from '@automapper/classes';
 
 @Module({
     imports: [
+        AutomapperModule.forRoot({
+            strategyInitializer: classes(),
+        }),
         ConfigModule.forRoot({
             isGlobal: true,
             envFilePath: `env/.env.${process.env.NODE_ENV || 'local'}`,
