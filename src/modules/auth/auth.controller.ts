@@ -27,4 +27,9 @@ export class AuthController {
     async checkUserWithPhone(@Body() dto: CheckUserWithPhoneDto) {
         return await this.authService.checkUserWithPhone(dto);
     }
+
+    @Post('sign-in-with-google')
+    async signInWithGoogle(@Body() dto: CheckUserWithPhoneDto) {
+        return await this.authService.signInWithGoogle(dto);
+    }
 }

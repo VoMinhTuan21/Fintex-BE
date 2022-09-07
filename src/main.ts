@@ -2,6 +2,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { initFireBase } from './config/firebase';
 import { initSwagger } from './config/swagger';
 
 async function bootstrap() {
@@ -11,6 +12,8 @@ async function bootstrap() {
     app.setGlobalPrefix('api/v1');
 
     initSwagger(app);
+
+    initFireBase(config);
 
     app.useGlobalPipes(
         new ValidationPipe({

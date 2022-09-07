@@ -2,6 +2,8 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import {
+    EMAIL_NOT_MATCH_WITH_ID_TOKEN,
+    ERROR_CHECK_USER_WITH_GOOGLE,
     ERROR_CHECK_USER_WITH_PHONE,
     ERROR_CREATE_USER,
     ERROR_EMAIL_HAS_BEEN_USED,
@@ -22,8 +24,7 @@ import { Mapper } from '@automapper/core';
 import { User } from '../../schemas/user.schema';
 import { InjectMapper } from '@automapper/nestjs';
 import { AuthVerifyUserDto, CheckUserWithPhoneDto } from '../../dto/request';
-import { getAuth, GoogleAuthProvider, signInWithCredential } from 'firebase/auth';
-import { app } from '../../config/firebase';
+import * as firebase from 'firebase-admin';
 
 @Injectable()
 export class AuthService {
@@ -123,11 +124,16 @@ export class AuthService {
 
     async verfiyUser(dto: AuthVerifyUserDto) {
         try {
-            const auth = getAuth(app);
-            const credential = GoogleAuthProvider.credential(dto.idToken);
-            const result = await signInWithCredential(auth, credential);
+            const userEmail = (await firebase.auth().verifyIdToken(dto.idToken)).email;
 
-            const user = await this.userService.findByEmail(result.user.email);
+            if (userEmail !== dto.user.email) {
+                return handleResponse({
+                    error: EMAIL_NOT_MATCH_WITH_ID_TOKEN,
+                    statusCode: HttpStatus.NOT_ACCEPTABLE,
+                });
+            }
+
+            const user = await this.userService.findByEmail(userEmail);
             if (user) {
                 return handleResponse({
                     message: USER_EXISTED,
@@ -145,6 +151,7 @@ export class AuthService {
                 });
             }
         } catch (error) {
+            console.log(error);
             return handleResponse({
                 error: error.response?.error || ERROR_VERIFY_USER,
                 statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
@@ -174,6 +181,26 @@ export class AuthService {
         } catch (error) {
             return handleResponse({
                 error: error.response?.error || ERROR_CHECK_USER_WITH_PHONE,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async signInWithGoogle(dto: CheckUserWithPhoneDto) {
+        try {
+            const user = await this.userService.findByPhone(dto.phone);
+            if (user) {
+                return handleResponse({
+                    message: SIGN_IN_SUCCESSFULLY,
+                    data: {
+                        token: await this.signJWTToken(user._id, user.email, user.phone),
+                        user: this.mapper.map(user, User, UserResDto),
+                    },
+                });
+            }
+        } catch (error) {
+            return handleResponse({
+                error: error.response?.error || ERROR_CHECK_USER_WITH_GOOGLE,
                 statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
             });
         }
