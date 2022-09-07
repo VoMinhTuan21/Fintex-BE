@@ -2,7 +2,7 @@ import { HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import {
-    EMAIL_NOT_MATCH_WITH_ID_TOKEN,
+    ERROR_EMAIL_NOT_MATCH_WITH_ID_TOKEN,
     ERROR_CHECK_USER_WITH_GOOGLE,
     ERROR_CHECK_USER_WITH_PHONE,
     ERROR_CREATE_USER,
@@ -16,6 +16,8 @@ import {
     SIGN_UP_SUCCESSFULLY,
     USER_EXISTED,
     USER_NOT_EXISTED,
+    ERROR_NOT_FOUND_CURRENT_USER,
+    GET_CURRENT_USER_SUCCESSFULLY,
 } from '../../constances';
 import { handleResponse, UserResDto } from '../../dto/response';
 import { UserService } from '../user/user.service';
@@ -128,7 +130,7 @@ export class AuthService {
 
             if (userEmail !== dto.user.email) {
                 return handleResponse({
-                    error: EMAIL_NOT_MATCH_WITH_ID_TOKEN,
+                    error: ERROR_EMAIL_NOT_MATCH_WITH_ID_TOKEN,
                     statusCode: HttpStatus.NOT_ACCEPTABLE,
                 });
             }
@@ -198,6 +200,31 @@ export class AuthService {
                     },
                 });
             }
+        } catch (error) {
+            return handleResponse({
+                error: error.response?.error || ERROR_CHECK_USER_WITH_GOOGLE,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async getCurrentUser(id: string) {
+        try {
+            const currUser = await this.userService.findById(id);
+            if (!currUser) {
+                return handleResponse({
+                    error: ERROR_NOT_FOUND_CURRENT_USER,
+                    statusCode: HttpStatus.NOT_FOUND,
+                });
+            }
+
+            return handleResponse({
+                message: GET_CURRENT_USER_SUCCESSFULLY,
+                data: {
+                    token: await this.signJWTToken(currUser._id, currUser.email, currUser.phone),
+                    user: this.mapper.map(currUser, User, UserResDto),
+                },
+            });
         } catch (error) {
             return handleResponse({
                 error: error.response?.error || ERROR_CHECK_USER_WITH_GOOGLE,

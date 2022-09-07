@@ -1,6 +1,8 @@
-import { Body, Controller, Post } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Request } from 'express';
 import { AuthSignInWithPhoneDto, AuthSignUpDto, AuthVerifyUserDto, CheckUserWithPhoneDto } from '../../dto/request';
+import { JwtGuard } from '../../guards/jwt.guard';
 import { AuthService } from './auth.service';
 
 @ApiTags('Auth')
@@ -31,5 +33,12 @@ export class AuthController {
     @Post('sign-in-with-google')
     async signInWithGoogle(@Body() dto: CheckUserWithPhoneDto) {
         return await this.authService.signInWithGoogle(dto);
+    }
+
+    @Get('/current-user')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    async getCurrentUser(@Req() req: Request) {
+        return await this.authService.getCurrentUser((req.user as IJWTInfo)._id);
     }
 }

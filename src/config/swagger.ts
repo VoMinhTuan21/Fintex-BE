@@ -8,7 +8,17 @@ export const initSwagger = (app: INestApplication) => {
         .setTitle('Fintex API Document')
         .setDescription('Description of Fintex social media')
         .addServer(config.get('SWAGGER_API_SERVER'))
-        .addBearerAuth()
+        .addBearerAuth(
+            {
+                description: `[just text field] Please enter token in following format: Bearer <JWT>`,
+                name: 'Authorization',
+                bearerFormat: 'Bearer',
+                scheme: 'Bearer',
+                type: 'http',
+                in: 'Header',
+            },
+            'access_token',
+        )
         .build();
     const document = SwaggerModule.createDocument(app, swaggerConfig);
     SwaggerModule.setup('swagger', app, document);
