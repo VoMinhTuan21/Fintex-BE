@@ -6,6 +6,9 @@ import * as Joi from 'joi';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AutomapperModule } from '@automapper/nestjs';
 import { classes } from '@automapper/classes';
+import { FeelingModule } from './modules/feeling/feeling.module';
+import { PostModule } from './modules/post/post.module';
+import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
 
 @Module({
     imports: [
@@ -29,6 +32,9 @@ import { classes } from '@automapper/classes';
         }),
         UserModule,
         AuthModule,
+        FeelingModule,
+        PostModule,
+        CloudinaryModule,
     ],
     controllers: [],
     providers: [],

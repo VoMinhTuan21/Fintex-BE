@@ -94,7 +94,7 @@ export class User {
     blocks: UserDocument[] | string[];
 
     @Prop([{ type: mongoose.Schema.Types.ObjectId, ref: 'Post' }])
-    post: PostDocument[] | string[];
+    posts: PostDocument[] | string[];
 
     @Prop({
         type: Boolean,
