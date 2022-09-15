@@ -45,9 +45,9 @@ export class Post {
             },
         ],
     })
-    reaction: {
+    reactions: {
         type: ReactionDocument | string;
-        userId: UserDocument | string;
+        user: UserDocument | string;
     }[];
 }
 

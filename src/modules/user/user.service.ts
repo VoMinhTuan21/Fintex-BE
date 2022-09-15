@@ -3,7 +3,8 @@ import { InjectModel } from '@nestjs/mongoose';
 import { match } from 'assert';
 import mongoose, { Model } from 'mongoose';
 import { User, UserDocument } from '../../schemas/user.schema';
-import { hashPasswords } from '../../utils';
+import { IResponsePost } from '../../types/post';
+import { comparePost, hashPasswords } from '../../utils';
 
 @Injectable()
 export class UserService {
@@ -62,7 +63,7 @@ export class UserService {
         return exceptPost;
     }
 
-    async findFriendsRecentPost(userId: string) {
+    async findFriendsRecentPost(userId: string): Promise<string[]> {
         const timeNow = new Date();
         timeNow.setDate(timeNow.getDate() - 2);
 
@@ -81,13 +82,11 @@ export class UserService {
                                 from: 'posts',
                                 localField: 'posts',
                                 foreignField: '_id',
-                                let: { createdAt: '$createdAt' },
                                 pipeline: [
-                                    { $match: { $expr: { $gt: ['$$createdAt', timeNow] } } },
+                                    { $match: { $expr: { $gt: ['$createdAt', timeNow] } } },
                                     {
                                         $project: {
-                                            updatedAt: 0,
-                                            __v: 0,
+                                            _id: 1,
                                         },
                                     },
                                 ],
@@ -105,13 +104,12 @@ export class UserService {
             },
         ]);
 
-        return user;
-        // const friendsRecentPosts: string[] = [];
+        const friendsRecentPosts: string[] = [];
 
-        // for (let i = 0; i < user.friends.length; i++) {
-        //     friendsRecentPosts.push(...user.friends[i].posts);
-        // }
+        for (let i = 0; i < user[0].friends.length; i++) {
+            friendsRecentPosts.push(...user[0].friends[i].posts);
+        }
 
-        // return friendsRecentPosts;
+        return friendsRecentPosts;
     }
 }
