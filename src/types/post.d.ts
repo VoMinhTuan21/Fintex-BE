@@ -46,5 +46,6 @@ declare interface IResponsePost {
     visibleFor: VisibleFor;
     images: IImage[];
     reaction: IPostReaction[];
+    comments: string[];
     createdAt: string;
 }

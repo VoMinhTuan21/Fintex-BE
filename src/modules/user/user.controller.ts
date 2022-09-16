@@ -21,4 +21,11 @@ export class UserController {
     async getFriendsRecentPosts(@Req() req: Request) {
         return await this.userService.findFriendsRecentPost((req.user as IJWTInfo)._id);
     }
+
+    @Get('/strangers-recent-posts')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    async getStrangersRecentPosts(@Req() req: Request) {
+        return await this.userService.findStrangerPostIds((req.user as IJWTInfo)._id);
+    }
 }

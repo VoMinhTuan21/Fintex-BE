@@ -57,14 +57,14 @@ export class PostController {
         return await this.postService.getPostsForPagination((req.user as IJWTInfo)._id);
     }
 
-    @Get('/pagination?')
-    @ApiBearerAuth('access_token')
-    @UseGuards(JwtGuard)
-    async getPaginationPosts(@Req() req: Request, @Query() paginate: PostPaginationDto) {
-        return await this.postService.findPostPagination(
-            (req.user as IJWTInfo)._id,
-            parseInt(paginate.limit),
-            paginate.after,
-        );
-    }
+    // @Get('/pagination?')
+    // @ApiBearerAuth('access_token')
+    // @UseGuards(JwtGuard)
+    // async getPaginationPosts(@Req() req: Request, @Query() paginate: PostPaginationDto) {
+    //     return await this.postService.findPostPagination(
+    //         (req.user as IJWTInfo)._id,
+    //         parseInt(paginate.limit),
+    //         paginate.after,
+    //     );
+    // }
 }
