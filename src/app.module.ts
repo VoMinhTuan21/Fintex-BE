@@ -9,6 +9,7 @@ import { classes } from '@automapper/classes';
 import { FeelingModule } from './modules/feeling/feeling.module';
 import { PostModule } from './modules/post/post.module';
 import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
+import { CommentModule } from './modules/comment/comment.module';
 
 @Module({
     imports: [
@@ -34,6 +35,7 @@ import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
         AuthModule,
         FeelingModule,
         PostModule,
+        CommentModule,
         CloudinaryModule,
     ],
     controllers: [],

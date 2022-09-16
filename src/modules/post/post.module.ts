@@ -11,5 +11,6 @@ import { PostProfile } from './post.profile';
     imports: [MongooseModule.forFeature([{ name: Post.name, schema: PostSchema }]), UserModule, CloudinaryModule],
     providers: [PostService, PostProfile],
     controllers: [PostController],
+    exports: [PostService],
 })
 export class PostModule {}

@@ -49,3 +49,9 @@ declare interface IResponsePost {
     comments: string[];
     createdAt: string;
 }
+
+declare interface ICommentsIdPaginate {
+    commentsId: string[];
+    after: string;
+    ended: boolean;
+}
