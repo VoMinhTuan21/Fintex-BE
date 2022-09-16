@@ -9,9 +9,11 @@ import {
     ERROR_POST_HAS_NO_DATA,
 } from '../../constances';
 import { handleResponse } from '../../dto/response';
+import { PostResDto } from '../../dto/response/post.dto';
 import { Post, PostDocument } from '../../schemas/post.schema';
 import { Image } from '../../types/classes';
-import { ICommentsIdPaginate, ICreatePost } from '../../types/post';
+import { ICommentsIdPaginate, ICreatePost, IResponsePost } from '../../types/post';
+import { comparePost } from '../../utils';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { UserService } from '../user/user.service';
 
@@ -106,9 +108,159 @@ export class PostService {
         }
     }
 
-    // async findPostPagination(userId: string, limit: number){
-    //     const exceptPosts = await this.userService.findExceptPost(userId);
+    async getPostsForPagination(userId: string) {
+        try {
+            const timeNow = new Date();
+            timeNow.setDate(timeNow.getDate() - 7);
 
-    //     const
-    // }
+            const exceptedPosts = await this.userService.findExceptPost(userId);
+            if (!exceptedPosts) {
+                return handleResponse({
+                    error: ERROR_GET_EXCEPTED_POST_ID,
+                    statusCode: HttpStatus.BAD_REQUEST,
+                });
+            }
+
+            const friendPostIds: string[] = await this.userService.findFriendsRecentPost(userId);
+            if (!friendPostIds) {
+                return handleResponse({
+                    error: ERROR_GET_FRIEND_POST_ID,
+                    statusCode: HttpStatus.BAD_REQUEST,
+                });
+            }
+
+            const notStrangerPostIds = [...exceptedPosts, ...friendPostIds];
+
+            //TODO: populate to get feeling and reaction of post
+            const strangerPosts: IResponsePost[] = await this.postModel.find({
+                _id: { $nin: notStrangerPostIds },
+                createdAt: { $gt: timeNow },
+            });
+            if (!strangerPosts) {
+                return handleResponse({
+                    error: ERROR_GET_STRANGER_POST,
+                    statusCode: HttpStatus.BAD_REQUEST,
+                });
+            }
+
+            //TODO: populate to get feeling and reaction of post
+            const friendPosts: IResponsePost[] = await this.postModel.find({
+                _id: { $in: friendPostIds },
+            });
+            if (!strangerPosts) {
+                return handleResponse({
+                    error: ERROR_GET_FRIEND_POST,
+                    statusCode: HttpStatus.BAD_REQUEST,
+                });
+            }
+
+            friendPosts.sort((postA, postB) => comparePost(postA, postB));
+            strangerPosts.sort((postA, postB) => comparePost(postA, postB));
+
+            const unionPosts: IResponsePost[] = [];
+            friendPosts.forEach((post) => {
+                unionPosts.push({
+                    _id: post._id,
+                    content: post.content,
+                    feeling: post.feeling,
+                    images: post.images || [],
+                    visibleFor: post.visibleFor,
+                    reaction: post.reaction || [],
+                    createdAt: post.createdAt,
+                });
+            });
+            strangerPosts.forEach((post) => {
+                unionPosts.push({
+                    _id: post._id,
+                    content: post.content,
+                    feeling: post.feeling,
+                    images: post.images || [],
+                    visibleFor: post.visibleFor,
+                    reaction: post.reaction || [],
+                    createdAt: post.createdAt,
+                });
+            });
+
+            return handleResponse({
+                message: GET_POST_FOR_PAGINATION_SUCCESSFULLY,
+                data: unionPosts,
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: error.response?.error || ERROR_GET_POST_FOR_PAGINATION,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async findPostPagination(userId: string, limit: number, after: string) {
+        try {
+            console.log('limit: ', typeof limit);
+            const response = await this.getPostsForPagination(userId);
+            const posts: IResponsePost[] = response.data;
+            console.log('posts.length: ', posts.length);
+
+            if (after) {
+                const indexAfter = posts.findIndex((post) => post._id.toString() === after);
+                console.log('indexAfter: ', indexAfter);
+                if (indexAfter) {
+                    if (indexAfter + limit < posts.length) {
+                        return handleResponse({
+                            message: GET_POST_PAGINATION_SUCCESSFULLY,
+                            data: {
+                                posts: posts.slice(indexAfter, indexAfter + limit),
+                                after: posts[indexAfter + limit]._id,
+                                ended: false,
+                            },
+                        });
+                    } else {
+                        return handleResponse({
+                            message: GET_POST_PAGINATION_SUCCESSFULLY,
+                            data: {
+                                posts: posts.slice(indexAfter),
+                                after: '',
+                                ended: true,
+                            },
+                        });
+                    }
+                } else {
+                    return handleResponse({
+                        message: GET_POST_PAGINATION_SUCCESSFULLY,
+                        data: {
+                            posts: [],
+                            after: '',
+                            ended: true,
+                        },
+                    });
+                }
+            } else {
+                if (posts.length > limit) {
+                    return handleResponse({
+                        message: GET_POST_PAGINATION_SUCCESSFULLY,
+                        data: {
+                            posts: posts.slice(0, limit),
+                            after: posts[limit]._id,
+                            ended: false,
+                        },
+                    });
+                } else {
+                    return handleResponse({
+                        message: GET_POST_PAGINATION_SUCCESSFULLY,
+                        data: {
+                            posts: posts,
+                            after: '',
+                            ended: true,
+                        },
+                    });
+                }
+            }
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: error.response?.error || ERROR_GET_POST_PAGINATION,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
 }

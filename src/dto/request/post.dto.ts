@@ -1,5 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsEnum, IsMongoId, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+    IsArray,
+    IsEnum,
+    IsMongoId,
+    IsNotEmpty,
+    IsNumber,
+    IsNumberString,
+    IsOptional,
+    IsString,
+} from 'class-validator';
 import { VisibleFor } from '../../types/enums';
 import { Orientation } from '../../types/enums/orientation';
 
@@ -59,4 +68,17 @@ export class CreatePostDto {
     @IsEnum(VisibleFor)
     @IsNotEmpty()
     visibleFor: VisibleFor;
+}
+
+export class PostPaginationDto {
+    @ApiPropertyOptional({ type: String })
+    @IsNumberString()
+    @IsNotEmpty()
+    limit: string;
+
+    @ApiPropertyOptional({ type: String })
+    @IsMongoId()
+    @IsNotEmpty()
+    @IsOptional()
+    after: string;
 }

@@ -19,7 +19,6 @@ export class UserController {
     @ApiBearerAuth('access_token')
     @UseGuards(JwtGuard)
     async getFriendsRecentPosts(@Req() req: Request) {
-        console.log((req.user as IJWTInfo)._id);
         return await this.userService.findFriendsRecentPost((req.user as IJWTInfo)._id);
     }
 }
