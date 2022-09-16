@@ -1,0 +1,97 @@
+import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    HttpStatus,
+    Param,
+    ParseUUIDPipe,
+    Post,
+    Put,
+    Query,
+    Req,
+    UploadedFile,
+    UseGuards,
+    UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { CreateCommentDto, GetParentCommentsDto, UpdateCommentDto } from '../../dto/request';
+import { handleResponse } from '../../dto/response';
+import { JwtGuard } from '../../guards/jwt.guard';
+import { imageFileFilter } from '../../utils';
+import { CommentService } from './comment.service';
+import { Request } from 'express';
+import { ValidateMongoId } from '../../utils/validate-pipe';
+
+@ApiTags('Comment')
+@Controller('comment')
+export class CommentController {
+    constructor(private readonly commentService: CommentService) {}
+
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    @ApiConsumes('multipart/form-data')
+    @UseInterceptors(
+        FileInterceptor('image', {
+            fileFilter: imageFileFilter,
+        }),
+    )
+    @ApiBody({
+        type: CreateCommentDto,
+    })
+    @Post()
+    create(@Body() dto: CreateCommentDto, @UploadedFile() image: Express.Multer.File, @Req() req: Request) {
+        if (!dto.content && !dto.image) {
+            return handleResponse({
+                error: 'Expect field content or image',
+                statusCode: HttpStatus.BAD_REQUEST,
+            });
+        }
+
+        if (image) {
+            dto.image = image;
+        }
+
+        return this.commentService.create(dto, (req.user as IJWTInfo)._id);
+    }
+
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    @ApiConsumes('multipart/form-data')
+    @UseInterceptors(
+        FileInterceptor('image', {
+            fileFilter: imageFileFilter,
+        }),
+    )
+    @ApiBody({
+        type: UpdateCommentDto,
+    })
+    @Put()
+    update(@Body() dto: UpdateCommentDto, @UploadedFile() image: Express.Multer.File, @Req() req: Request) {
+        if (!dto.content && !dto.image && !dto.oldImage) {
+            return handleResponse({
+                error: 'Expect field content or image or oldImage',
+                statusCode: HttpStatus.BAD_REQUEST,
+            });
+        }
+
+        if (image) {
+            dto.image = image;
+        }
+
+        return this.commentService.update(dto, (req.user as IJWTInfo)._id);
+    }
+
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    @Delete('/:id')
+    delete(@Param('id', ValidateMongoId) id: string, @Req() req: Request) {
+        return this.commentService.delelte(id, (req.user as IJWTInfo)._id);
+    }
+
+    @Get('/:postId?')
+    getParentComments(@Param('postId', ValidateMongoId) postId: string, @Query() query: GetParentCommentsDto) {
+        return this.commentService.getCommentParent(postId, parseInt(query.limit), query.after);
+    }
+}

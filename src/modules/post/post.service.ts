@@ -1,11 +1,17 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { CREATE_POST_SUCCESSFULLY, ERROR_CREATE_POST, ERROR_POST_HAS_NO_DATA } from '../../constances';
+import mongoose, { Model } from 'mongoose';
+import {
+    CREATE_POST_SUCCESSFULLY,
+    ERROR_ADD_COMMENT_TO_POST,
+    ERROR_CREATE_POST,
+    ERROR_GET_COMMENT_POST,
+    ERROR_POST_HAS_NO_DATA,
+} from '../../constances';
 import { handleResponse } from '../../dto/response';
 import { Post, PostDocument } from '../../schemas/post.schema';
 import { Image } from '../../types/classes';
-import { ICreatePost } from '../../types/post';
+import { ICommentsIdPaginate, ICreatePost } from '../../types/post';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { UserService } from '../user/user.service';
 
@@ -34,7 +40,7 @@ export class PostService {
                 const { height, width, public_id } = await this.cloudinaryService.uploadImage(file, 'Fintex');
                 const image: Image = {
                     publicId: public_id,
-                    orientation: height > width ? 'vertical' : 'horizontal',
+                    orientation: height >= width ? 'vertical' : 'horizontal',
                 };
                 images.push(image);
             }
@@ -56,6 +62,46 @@ export class PostService {
             return handleResponse({
                 error: error.response?.error || ERROR_CREATE_POST,
                 statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async addComment(postId: string, commentId: string) {
+        try {
+            this.postModel
+                .updateOne({ _id: postId }, { $push: { comments: new mongoose.Types.ObjectId(commentId) + '' } })
+                .exec();
+        } catch (error) {
+            console.log(error);
+            return handleResponse({
+                error: ERROR_ADD_COMMENT_TO_POST,
+                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+            });
+        }
+    }
+
+    async getComments(postId: string, limit: number, after: string) {
+        try {
+            const post = await this.postModel.findById(postId);
+            let index: number;
+            if (after) {
+                index = post.comments.reverse().findIndex((item) => item.toString() === after);
+            } else {
+                index = 0;
+            }
+
+            const result: ICommentsIdPaginate = {
+                commentsId: post.comments.reverse().slice(index, index + limit) as string[],
+                after: index + limit < post.comments.length ? post.comments[index + limit].toString() : '',
+                ended: index + limit > post.comments.length,
+            };
+
+            return result;
+        } catch (error) {
+            console.log(error);
+            return handleResponse({
+                error: ERROR_GET_COMMENT_POST,
+                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
             });
         }
     }

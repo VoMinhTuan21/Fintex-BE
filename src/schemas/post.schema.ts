@@ -5,6 +5,7 @@ import { FeelingDocument } from './feeling.schema';
 import { ReactionDocument } from './reaction.schema';
 import { UserDocument } from './user.schema';
 import { Image } from '../types/classes';
+import { CommentDocument } from './comment.schema';
 
 export type PostDocument = Post & Document;
 
@@ -36,6 +37,9 @@ export class Post {
 
     @Prop([{ type: String }])
     videos: string[];
+
+    @Prop([{ type: mongoose.Schema.Types.ObjectId, ref: 'Comment' }])
+    comments: CommentDocument[] | string[];
 
     @Prop({
         type: [

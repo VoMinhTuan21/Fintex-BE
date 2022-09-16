@@ -15,3 +15,9 @@ declare interface ICreatePost {
     feeling?: string;
     visibleFor: VisibleFor;
 }
+
+declare interface ICommentsIdPaginate {
+    commentsId: string[];
+    after: string;
+    ended: boolean;
+}
