@@ -94,4 +94,13 @@ export class CommentController {
     getParentComments(@Param('postId', ValidateMongoId) postId: string, @Query() query: GetParentCommentsDto) {
         return this.commentService.getCommentParent(postId, parseInt(query.limit), query.after);
     }
+
+    @Get('/:postId/:parentId?')
+    getChildComments(
+        @Param('postId', ValidateMongoId) postId: string,
+        @Param('parentId', ValidateMongoId) parentId: string,
+        @Query() query: GetParentCommentsDto,
+    ) {
+        return this.commentService.getCommentChildren(postId, parentId, parseInt(query.limit), query.after);
+    }
 }

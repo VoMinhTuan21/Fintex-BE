@@ -9,11 +9,16 @@ export class CommnentResDto {
     };
     content: string;
     image: string;
-    parentComment: string | null | undefined;
+    parentId: string | null | undefined;
     commentsChildren: number;
     reaction: {
         title: string;
         userId: string;
     }[];
     createAt: string;
+}
+
+export class CreateCommentResDto {
+    comment: CommnentResDto;
+    after: string;
 }

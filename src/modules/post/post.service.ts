@@ -3,10 +3,22 @@ import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
 import {
     CREATE_POST_SUCCESSFULLY,
+    DELETE_COMMENT_SUCCESS,
     ERROR_ADD_COMMENT_TO_POST,
     ERROR_CREATE_POST,
+    ERROR_DELETE_COMMENT_POST,
     ERROR_GET_COMMENT_POST,
+    ERROR_GET_EXCEPTED_POST_ID,
+    ERROR_GET_FRIEND_POST,
+    ERROR_GET_FRIEND_POST_ID,
+    ERROR_GET_POST_FOR_PAGINATION,
+    ERROR_GET_POST_PAGINATION,
+    ERROR_GET_STRANGER_POST,
+    ERROR_NOT_FOUND,
+    ERROR_NOT_HAVE_PERMISSION,
     ERROR_POST_HAS_NO_DATA,
+    GET_POST_FOR_PAGINATION_SUCCESSFULLY,
+    GET_POST_PAGINATION_SUCCESSFULLY,
 } from '../../constances';
 import { handleResponse } from '../../dto/response';
 import { PostResDto } from '../../dto/response/post.dto';
@@ -85,16 +97,17 @@ export class PostService {
     async getComments(postId: string, limit: number, after: string) {
         try {
             const post = await this.postModel.findById(postId);
+            const commentIds = post.comments.reverse();
             let index: number;
             if (after) {
-                index = post.comments.reverse().findIndex((item) => item.toString() === after);
+                index = commentIds.findIndex((item) => item.toString() === after);
             } else {
                 index = 0;
             }
 
             const result: ICommentsIdPaginate = {
-                commentsId: post.comments.reverse().slice(index, index + limit) as string[],
-                after: index + limit < post.comments.length ? post.comments[index + limit].toString() : '',
+                commentsId: commentIds.slice(index, index + limit) as string[],
+                after: index + limit < post.comments.length ? commentIds[index + limit].toString() : '',
                 ended: index + limit > post.comments.length,
             };
 
@@ -262,5 +275,75 @@ export class PostService {
                 statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
             });
         }
+    }
+
+    async deleteComment(postId: string, commentId: string, userId: string) {
+        try {
+            const comment = await this.postModel.aggregate([
+                {
+                    $match: { _id: new mongoose.Types.ObjectId(postId) },
+                },
+                {
+                    $lookup: {
+                        from: 'comments',
+                        foreignField: '_id',
+                        localField: 'comments',
+                        as: 'comments',
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $eq: ['$_id', new mongoose.Types.ObjectId(commentId)],
+                                    },
+                                },
+                            },
+                            {
+                                $project: { _id: 0, userId: 1 },
+                            },
+                        ],
+                    },
+                },
+                {
+                    $project: { _id: 0, comments: 1 },
+                },
+            ]);
+
+            if (userId !== comment[0].comments[0].userId.toString()) {
+                return handleResponse({
+                    error: ERROR_NOT_HAVE_PERMISSION,
+                    statusCode: HttpStatus.UNAUTHORIZED,
+                });
+            }
+
+            await this.postModel.updateOne(
+                { _id: postId },
+                {
+                    $pull: { comments: commentId },
+                },
+            );
+
+            return handleResponse({
+                message: DELETE_COMMENT_SUCCESS,
+                data: commentId,
+            });
+        } catch (error) {
+            console.log(error);
+            return handleResponse({
+                error: error.response?.error || ERROR_DELETE_COMMENT_POST,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async getAfter(postId: string, commentId: string) {
+        const post = await this.postModel.findById(postId);
+        const comments = post.comments.reverse();
+        const index = comments.findIndex((item: any) => item.toString() === commentId);
+
+        if (index === comments.length - 1) {
+            return '';
+        }
+
+        return comments[index + 1].toString();
     }
 }

@@ -82,3 +82,15 @@ export class PostPaginationDto {
     @IsOptional()
     after: string;
 }
+
+export class DeleteCommentDto {
+    @ApiProperty({ type: String })
+    @IsMongoId()
+    @IsNotEmpty()
+    postId: string;
+
+    @ApiProperty({ type: String })
+    @IsMongoId()
+    @IsNotEmpty()
+    commentId: string;
+}

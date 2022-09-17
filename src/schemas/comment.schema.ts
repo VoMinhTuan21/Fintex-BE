@@ -33,8 +33,8 @@ export class Comment {
     })
     userId: UserDocument | string;
 
-    @Prop({ type: Image })
-    image: Image;
+    @Prop({ type: String })
+    image: string;
 
     @Prop({
         type: [

@@ -1,6 +1,17 @@
-import { Body, Controller, Get, Post, Query, Req, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Post,
+    Query,
+    Req,
+    UploadedFiles,
+    UseGuards,
+    UseInterceptors,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
-import { CreatePostDto, PostPaginationDto } from '../../dto/request/post.dto';
+import { CreatePostDto, DeleteCommentDto, PostPaginationDto } from '../../dto/request/post.dto';
 import { JwtGuard } from '../../guards/jwt.guard';
 import { PostService } from './post.service';
 import { Request } from 'express';
@@ -66,5 +77,12 @@ export class PostController {
             parseInt(paginate.limit),
             paginate.after,
         );
+    }
+
+    @Delete('/comment')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    async deleteComment(@Body() dto: DeleteCommentDto, @Req() req: Request) {
+        return this.postService.deleteComment(dto.postId, dto.commentId, (req.user as IJWTInfo)._id);
     }
 }

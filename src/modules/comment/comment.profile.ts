@@ -1,8 +1,8 @@
 import { AutomapperProfile, InjectMapper } from '@automapper/nestjs';
 import { createMap, forMember, mapFrom, Mapper } from '@automapper/core';
 import { Injectable } from '@nestjs/common';
-import { User } from '../../schemas/user.schema';
-import { UserResDto } from '../../dto/response';
+import { Comment } from '../../schemas';
+import { CommnentResDto } from '../../dto/response/comment.dto';
 
 @Injectable()
 export class UserProfile extends AutomapperProfile {
@@ -14,35 +14,27 @@ export class UserProfile extends AutomapperProfile {
         return (mapper: Mapper) => {
             createMap(
                 mapper,
-                User,
-                UserResDto,
+                Comment,
+                CommnentResDto,
                 forMember(
                     (destination) => destination._id,
                     mapFrom((source) => source._id),
                 ),
                 forMember(
-                    (destination) => destination.name,
-                    mapFrom((source) => source.name),
+                    (destination) => destination.level,
+                    mapFrom((source) => source.level),
                 ),
                 forMember(
-                    (destination) => destination.email,
-                    mapFrom((source) => source.email),
+                    (destination) => destination.content,
+                    mapFrom((source) => source.content),
                 ),
                 forMember(
-                    (destination) => destination.phone,
-                    mapFrom((source) => source.phone),
+                    (destination) => destination.image,
+                    mapFrom((source) => source.image),
                 ),
                 forMember(
-                    (destination) => destination.avatar,
-                    mapFrom((source) => source.avatar),
-                ),
-                forMember(
-                    (destination) => destination.birthday,
-                    mapFrom((source) => source.birthday),
-                ),
-                forMember(
-                    (destination) => destination.gender,
-                    mapFrom((source) => source.gender),
+                    (destination) => destination.parentId,
+                    mapFrom((source) => source.parentId),
                 ),
             );
         };
