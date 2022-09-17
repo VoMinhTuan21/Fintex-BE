@@ -12,11 +12,10 @@ import {
     GET_COMMENT_SUCCESS,
     UPDATE_COMMENT_SUCCESS,
 } from '../../constances';
-import { CreateCommentDto, GetParentCommentsDto, UpdateCommentDto } from '../../dto/request';
+import { CreateCommentDto, UpdateCommentDto } from '../../dto/request';
 import { handleResponse } from '../../dto/response';
 import { CommnentResDto, CreateCommentResDto } from '../../dto/response/comment.dto';
 import { Comment, CommentDocument } from '../../schemas';
-import { Image } from '../../types/classes';
 import { ICommentsIdPaginate } from '../../types/post';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { PostService } from '../post/post.service';
@@ -42,7 +41,7 @@ export class CommentService {
                     as: 'user',
                     pipeline: [
                         {
-                            $project: { avatar: 1, name: 1 },
+                            $project: { avatar: 1, name: 1, userId: '$_id' },
                         },
                     ],
                 },

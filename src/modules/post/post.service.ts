@@ -8,25 +8,22 @@ import {
     ERROR_CREATE_POST,
     ERROR_DELETE_COMMENT_POST,
     ERROR_GET_COMMENT_POST,
-    ERROR_GET_EXCEPTED_POST_ID,
-    ERROR_GET_FRIEND_POST,
     ERROR_GET_FRIEND_POST_ID,
     ERROR_GET_POST_FOR_PAGINATION,
     ERROR_GET_POST_PAGINATION,
-    ERROR_GET_STRANGER_POST,
-    ERROR_NOT_FOUND,
+    ERROR_GET_STRANGER_POST_IDS,
     ERROR_NOT_HAVE_PERMISSION,
     ERROR_POST_HAS_NO_DATA,
     GET_POST_FOR_PAGINATION_SUCCESSFULLY,
     GET_POST_PAGINATION_SUCCESSFULLY,
 } from '../../constances';
 import { handleResponse } from '../../dto/response';
-import { PostResDto } from '../../dto/response/post.dto';
 import { Post, PostDocument } from '../../schemas/post.schema';
-import { Image } from '../../types/classes';
-import { ICommentsIdPaginate, ICreatePost, IResponsePost } from '../../types/post';
-import { comparePost } from '../../utils';
+import { Image, PostIdWithUser } from '../../types/classes';
+import { Orientation } from '../../types/enums/orientation';
+import { ICommentsIdPaginate, ICreatePost, IImage, IResPost } from '../../types/post';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { FeelingService } from '../feeling/feeling.service';
 import { UserService } from '../user/user.service';
 
 @Injectable()
@@ -34,6 +31,7 @@ export class PostService {
     constructor(
         @InjectModel(Post.name) private postModel: Model<PostDocument>,
         private readonly userService: UserService,
+        private readonly feelingService: FeelingService,
         private readonly cloudinaryService: CloudinaryService,
     ) {}
 
@@ -48,14 +46,22 @@ export class PostService {
             }
 
             const images: Image[] = [];
+            const newImages: IImage[] = [];
 
             for (let index = 0; index < imageFiles.length; index++) {
                 const file = imageFiles[index];
-                const { height, width, public_id } = await this.cloudinaryService.uploadImage(file, 'Fintex');
+                const { height, width, public_id, url } = await this.cloudinaryService.uploadImage(file, 'Fintex');
                 const image: Image = {
                     publicId: public_id,
-                    orientation: height >= width ? 'vertical' : 'horizontal',
+                    orientation: height >= width ? Orientation.Vertical : Orientation.Horizontal,
                 };
+
+                const imageRes: IImage = {
+                    url,
+                    orientation: height >= width ? Orientation.Vertical : Orientation.Horizontal,
+                };
+
+                newImages.push(imageRes);
                 images.push(image);
             }
 
@@ -66,11 +72,25 @@ export class PostService {
                 visibleFor,
             });
 
-            await this.userService.addPost(userId, post._id);
+            const user = await this.userService.addPost(userId, post._id);
+            const avatar = await this.cloudinaryService.getImageUrl(user.avatar);
+            const feelingDetail = await this.feelingService.findById(feeling);
 
+            const responsePost = {
+                _id: post._id,
+                userId: user._id,
+                avatar,
+                name: user.name,
+                content: post.content,
+                feeling: feelingDetail,
+                visibleFor: post.visibleFor,
+                images: newImages,
+                comments: 0,
+                createdAt: new Date().toISOString(),
+            };
             return handleResponse({
                 message: CREATE_POST_SUCCESSFULLY,
-                data: post,
+                data: responsePost,
             });
         } catch (error) {
             return handleResponse({
@@ -108,7 +128,7 @@ export class PostService {
             const result: ICommentsIdPaginate = {
                 commentsId: commentIds.slice(index, index + limit) as string[],
                 after: index + limit < post.comments.length ? commentIds[index + limit].toString() : '',
-                ended: index + limit > post.comments.length,
+                ended: index + limit >= post.comments.length,
             };
 
             return result;
@@ -123,18 +143,7 @@ export class PostService {
 
     async getPostsForPagination(userId: string) {
         try {
-            const timeNow = new Date();
-            timeNow.setDate(timeNow.getDate() - 7);
-
-            const exceptedPosts = await this.userService.findExceptPost(userId);
-            if (!exceptedPosts) {
-                return handleResponse({
-                    error: ERROR_GET_EXCEPTED_POST_ID,
-                    statusCode: HttpStatus.BAD_REQUEST,
-                });
-            }
-
-            const friendPostIds: string[] = await this.userService.findFriendsRecentPost(userId);
+            const friendPostIds: PostIdWithUser[] = await this.userService.findFriendsRecentPost(userId);
             if (!friendPostIds) {
                 return handleResponse({
                     error: ERROR_GET_FRIEND_POST_ID,
@@ -142,61 +151,73 @@ export class PostService {
                 });
             }
 
-            const notStrangerPostIds = [...exceptedPosts, ...friendPostIds];
-
-            //TODO: populate to get feeling and reaction of post
-            const strangerPosts: IResponsePost[] = await this.postModel.find({
-                _id: { $nin: notStrangerPostIds },
-                createdAt: { $gt: timeNow },
-            });
-            if (!strangerPosts) {
+            const strangerPostIds: PostIdWithUser[] = await this.userService.findStrangerPostIds(userId);
+            if (!strangerPostIds) {
                 return handleResponse({
-                    error: ERROR_GET_STRANGER_POST,
+                    error: ERROR_GET_STRANGER_POST_IDS,
                     statusCode: HttpStatus.BAD_REQUEST,
                 });
             }
 
-            //TODO: populate to get feeling and reaction of post
-            const friendPosts: IResponsePost[] = await this.postModel.find({
-                _id: { $in: friendPostIds },
+            const unionPostsWithUser: PostIdWithUser[] = [...friendPostIds, ...strangerPostIds];
+            const postIds: string[] = [];
+            unionPostsWithUser.forEach((item) => {
+                item.posts.forEach((id) => postIds.push(id));
             });
-            if (!strangerPosts) {
+
+            //TODO: populate to get feeling and reaction of post
+            const unionPosts: IResPost[] = await this.postModel
+                .find(
+                    {
+                        _id: { $in: postIds },
+                    },
+                    { updatedAt: 0, __v: 0 },
+                )
+                .populate('feeling', 'name emoji');
+            if (!unionPosts) {
                 return handleResponse({
-                    error: ERROR_GET_FRIEND_POST,
+                    error: ERROR_GET_STRANGER_POST_IDS,
                     statusCode: HttpStatus.BAD_REQUEST,
                 });
             }
 
-            friendPosts.sort((postA, postB) => comparePost(postA, postB));
-            strangerPosts.sort((postA, postB) => comparePost(postA, postB));
+            const newUnionPostsWithUser = [];
+            for (let i = 0; i < unionPosts.length; i++) {
+                const post = unionPosts[i];
+                for (let j = 0; j < unionPostsWithUser.length; j++) {
+                    const user = unionPostsWithUser[j];
+                    const indexPost = user.posts.findIndex((id) => id.toString() === post._id.toString());
+                    if (indexPost !== -1) {
+                        const newImages: IImage[] = [];
+                        for (let index = 0; index < post.images.length; index++) {
+                            const img = post.images[index];
+                            const url = await this.cloudinaryService.getImageUrl(img.publicId);
+                            newImages.push({
+                                url,
+                                orientation: img.orientation,
+                            });
+                        }
 
-            const unionPosts: IResponsePost[] = [];
-            friendPosts.forEach((post) => {
-                unionPosts.push({
-                    _id: post._id,
-                    content: post.content,
-                    feeling: post.feeling,
-                    images: post.images || [],
-                    visibleFor: post.visibleFor,
-                    reaction: post.reaction || [],
-                    createdAt: post.createdAt,
-                });
-            });
-            strangerPosts.forEach((post) => {
-                unionPosts.push({
-                    _id: post._id,
-                    content: post.content,
-                    feeling: post.feeling,
-                    images: post.images || [],
-                    visibleFor: post.visibleFor,
-                    reaction: post.reaction || [],
-                    createdAt: post.createdAt,
-                });
-            });
+                        newUnionPostsWithUser.push({
+                            userId: user._id,
+                            name: user.name,
+                            avatar: await this.cloudinaryService.getImageUrl(user.avatar),
+                            _id: post._id,
+                            content: post.content,
+                            feeling: post.feeling,
+                            visibleFor: post.visibleFor,
+                            images: newImages,
+                            createdAt: post.createdAt,
+                            comments: post.comments.length,
+                        });
+                    }
+                }
+            }
 
+            console.log('newUnionPostsWithUser: ', newUnionPostsWithUser);
             return handleResponse({
                 message: GET_POST_FOR_PAGINATION_SUCCESSFULLY,
-                data: unionPosts,
+                data: newUnionPostsWithUser,
             });
         } catch (error) {
             console.log('error: ', error);
@@ -209,9 +230,10 @@ export class PostService {
 
     async findPostPagination(userId: string, limit: number, after: string) {
         try {
-            console.log('limit: ', typeof limit);
+            console.log('limit: ', limit);
             const response = await this.getPostsForPagination(userId);
-            const posts: IResponsePost[] = response.data;
+            const posts = response.data;
+            console.log('posts: ', posts);
             console.log('posts.length: ', posts.length);
 
             if (after) {
@@ -258,6 +280,7 @@ export class PostService {
                         },
                     });
                 } else {
+                    console.log('vo khong');
                     return handleResponse({
                         message: GET_POST_PAGINATION_SUCCESSFULLY,
                         data: {

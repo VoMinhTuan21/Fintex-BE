@@ -1,10 +1,9 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { match } from 'assert';
 import mongoose, { Model } from 'mongoose';
 import { User, UserDocument } from '../../schemas/user.schema';
-import { IResponsePost } from '../../types/post';
-import { comparePost, hashPasswords } from '../../utils';
+import { PostIdWithUser } from '../../types/classes';
+import { hashPasswords } from '../../utils';
 
 @Injectable()
 export class UserService {
@@ -19,6 +18,7 @@ export class UserService {
             birthday,
             email,
             gender,
+            avatar: process.env.PUBLIC_ID_DEFAULT_AVATAR,
             name,
             password: hashPass,
             phone,
@@ -63,7 +63,7 @@ export class UserService {
         return exceptPost;
     }
 
-    async findFriendsRecentPost(userId: string): Promise<string[]> {
+    async findFriendsRecentPost(userId: string) {
         const timeNow = new Date();
         timeNow.setDate(timeNow.getDate() - 2);
 
@@ -99,17 +99,74 @@ export class UserService {
             },
             {
                 $project: {
+                    'friends._id': 1,
                     'friends.posts': 1,
+                    'friends.name': 1,
+                    'friends.avatar': 1,
                 },
             },
         ]);
 
-        const friendsRecentPosts: string[] = [];
+        return this.mapPostWithUser(user[0].friends);
+    }
 
-        for (let i = 0; i < user[0].friends.length; i++) {
-            friendsRecentPosts.push(...user[0].friends[i].posts);
+    async findStrangerPostIds(userId: string) {
+        try {
+            const timeNow = new Date();
+            timeNow.setDate(timeNow.getDate() - 7);
+
+            const me = await this.userModel.findById(userId);
+            const notStragerIds = [...me.friends, ...me.blocks, me._id];
+
+            const strangerPostIds = await this.userModel.aggregate([
+                {
+                    $match: {
+                        _id: { $nin: notStragerIds },
+                    },
+                },
+                {
+                    $lookup: {
+                        from: 'posts',
+                        localField: 'posts',
+                        foreignField: '_id',
+                        pipeline: [
+                            { $match: { $expr: { $gt: ['$createdAt', timeNow] } } },
+                            {
+                                $project: {
+                                    _id: 1,
+                                },
+                            },
+                        ],
+                        as: 'posts',
+                    },
+                },
+                {
+                    $project: {
+                        _id: 1,
+                        posts: 1,
+                        name: 1,
+                        avatar: 1,
+                    },
+                },
+            ]);
+
+            return this.mapPostWithUser(strangerPostIds);
+        } catch (error) {
+            console.log('error: ', error);
         }
+    }
 
-        return friendsRecentPosts;
+    mapPostWithUser(arr: any[]) {
+        const postIdWithUser: PostIdWithUser[] = [];
+        arr.forEach((post) => {
+            postIdWithUser.push({
+                _id: post._id,
+                avatar: post.avatar,
+                name: post.name,
+                posts: post.posts.map((item) => item._id),
+            });
+        });
+
+        return postIdWithUser;
     }
 }
