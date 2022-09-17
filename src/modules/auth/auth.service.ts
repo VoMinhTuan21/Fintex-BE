@@ -27,6 +27,7 @@ import { User } from '../../schemas/user.schema';
 import { InjectMapper } from '@automapper/nestjs';
 import { AuthVerifyUserDto, CheckUserWithPhoneDto } from '../../dto/request';
 import * as firebase from 'firebase-admin';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 @Injectable()
 export class AuthService {
@@ -35,6 +36,7 @@ export class AuthService {
         @InjectMapper() private readonly mapper: Mapper,
         private readonly userService: UserService,
         private jwtService: JwtService,
+        private readonly cloudinaryService: CloudinaryService,
     ) {}
 
     async signInWithPhone(authSignIn: ISignInWithPhone) {
@@ -95,6 +97,8 @@ export class AuthService {
                     statusCode: HttpStatus.BAD_REQUEST,
                 });
             }
+
+            newUser.avatar = await this.cloudinaryService.getImageUrl(newUser.avatar);
 
             return handleResponse({
                 message: SIGN_UP_SUCCESSFULLY,
@@ -191,6 +195,9 @@ export class AuthService {
     async signInWithGoogle(dto: CheckUserWithPhoneDto) {
         try {
             const user = await this.userService.findByPhone(dto.phone);
+
+            user.avatar = await this.cloudinaryService.getImageUrl(user.avatar);
+
             if (user) {
                 return handleResponse({
                     message: SIGN_IN_SUCCESSFULLY,
@@ -217,6 +224,8 @@ export class AuthService {
                     statusCode: HttpStatus.NOT_FOUND,
                 });
             }
+
+            currUser.avatar = await this.cloudinaryService.getImageUrl(currUser.avatar);
 
             return handleResponse({
                 message: GET_CURRENT_USER_SUCCESSFULLY,

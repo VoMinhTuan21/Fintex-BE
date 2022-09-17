@@ -39,12 +39,15 @@ declare interface IPostReaction {
     user: IUserReaction;
 }
 
-declare interface IResponsePost {
+declare interface IResPost {
     _id: string;
     content: string;
     feeling: IFeeling;
     visibleFor: VisibleFor;
-    images: IImage[];
+    images: {
+        publicId: string;
+        orientation: Orientation;
+    }[];
     reaction: IPostReaction[];
     comments: string[];
     createdAt: string;

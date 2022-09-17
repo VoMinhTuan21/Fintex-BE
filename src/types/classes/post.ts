@@ -1,6 +1,8 @@
+import { Orientation } from '../enums/orientation';
+
 export class Image {
     publicId: string;
-    orientation: 'horizontal' | 'vertical';
+    orientation: Orientation;
 }
 
 export class PostIdWithUser {

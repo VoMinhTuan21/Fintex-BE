@@ -1,11 +1,9 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { match } from 'assert';
 import mongoose, { Model } from 'mongoose';
 import { User, UserDocument } from '../../schemas/user.schema';
 import { PostIdWithUser } from '../../types/classes';
-import { IResponsePost } from '../../types/post';
-import { comparePost, hashPasswords } from '../../utils';
+import { hashPasswords } from '../../utils';
 
 @Injectable()
 export class UserService {
@@ -20,6 +18,7 @@ export class UserService {
             birthday,
             email,
             gender,
+            avatar: process.env.PUBLIC_ID_DEFAULT_AVATAR,
             name,
             password: hashPass,
             phone,
@@ -107,14 +106,6 @@ export class UserService {
                 },
             },
         ]);
-
-        // const friendsRecentPosts: string[] = [];
-
-        // for (let i = 0; i < user[0].friends.length; i++) {
-        //     friendsRecentPosts.push(...user[0].friends[i].posts);
-        // }
-
-        // console.log(user[0].friends);
 
         return this.mapPostWithUser(user[0].friends);
     }

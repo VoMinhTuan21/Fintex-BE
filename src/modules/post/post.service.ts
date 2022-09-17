@@ -8,17 +8,20 @@ import {
     ERROR_GET_COMMENT_POST,
     ERROR_GET_FRIEND_POST_ID,
     ERROR_GET_POST_FOR_PAGINATION,
+    ERROR_GET_POST_PAGINATION,
     ERROR_GET_STRANGER_POST_IDS,
     ERROR_POST_HAS_NO_DATA,
     GET_POST_FOR_PAGINATION_SUCCESSFULLY,
+    GET_POST_PAGINATION_SUCCESSFULLY,
 } from '../../constances';
 import { handleResponse } from '../../dto/response';
-import { PostResDto } from '../../dto/response/post.dto';
 import { Post, PostDocument } from '../../schemas/post.schema';
 import { Image, PostIdWithUser } from '../../types/classes';
-import { ICommentsIdPaginate, ICreatePost, IResponsePost } from '../../types/post';
+import { Orientation } from '../../types/enums/orientation';
+import { ICommentsIdPaginate, ICreatePost, IImage, IResPost } from '../../types/post';
 import { comparePost } from '../../utils';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { FeelingService } from '../feeling/feeling.service';
 import { UserService } from '../user/user.service';
 
 @Injectable()
@@ -26,6 +29,7 @@ export class PostService {
     constructor(
         @InjectModel(Post.name) private postModel: Model<PostDocument>,
         private readonly userService: UserService,
+        private readonly feelingService: FeelingService,
         private readonly cloudinaryService: CloudinaryService,
     ) {}
 
@@ -40,14 +44,22 @@ export class PostService {
             }
 
             const images: Image[] = [];
+            const newImages: IImage[] = [];
 
             for (let index = 0; index < imageFiles.length; index++) {
                 const file = imageFiles[index];
-                const { height, width, public_id } = await this.cloudinaryService.uploadImage(file, 'Fintex');
+                const { height, width, public_id, url } = await this.cloudinaryService.uploadImage(file, 'Fintex');
                 const image: Image = {
                     publicId: public_id,
-                    orientation: height >= width ? 'vertical' : 'horizontal',
+                    orientation: height >= width ? Orientation.Vertical : Orientation.Horizontal,
                 };
+
+                const imageRes: IImage = {
+                    url,
+                    orientation: height >= width ? Orientation.Vertical : Orientation.Horizontal,
+                };
+
+                newImages.push(imageRes);
                 images.push(image);
             }
 
@@ -58,11 +70,25 @@ export class PostService {
                 visibleFor,
             });
 
-            await this.userService.addPost(userId, post._id);
+            const user = await this.userService.addPost(userId, post._id);
+            const avatar = await this.cloudinaryService.getImageUrl(user.avatar);
+            const feelingDetail = await this.feelingService.findById(feeling);
 
+            const responsePost = {
+                _id: post._id,
+                userId: user._id,
+                avatar,
+                name: user.name,
+                content: post.content,
+                feeling: feelingDetail,
+                visibleFor: post.visibleFor,
+                images: newImages,
+                comments: 0,
+                createdAt: new Date().toISOString(),
+            };
             return handleResponse({
                 message: CREATE_POST_SUCCESSFULLY,
-                data: post,
+                data: responsePost,
             });
         } catch (error) {
             return handleResponse({
@@ -137,40 +163,55 @@ export class PostService {
             });
 
             //TODO: populate to get feeling and reaction of post
-            const unionPosts: IResponsePost[] = await this.postModel.find(
-                {
-                    _id: { $in: postIds },
-                },
-                { updatedAt: 0, __v: 0 },
-            );
+            const unionPosts: IResPost[] = await this.postModel
+                .find(
+                    {
+                        _id: { $in: postIds },
+                    },
+                    { updatedAt: 0, __v: 0 },
+                )
+                .populate('feeling', 'name emoji');
             if (!unionPosts) {
                 return handleResponse({
                     error: ERROR_GET_STRANGER_POST_IDS,
                     statusCode: HttpStatus.BAD_REQUEST,
                 });
             }
+
             const newUnionPostsWithUser = [];
-            unionPosts.forEach((post) => {
-                unionPostsWithUser.forEach((user) => {
+            for (let i = 0; i < unionPosts.length; i++) {
+                const post = unionPosts[i];
+                for (let j = 0; j < unionPostsWithUser.length; j++) {
+                    const user = unionPostsWithUser[j];
                     const indexPost = user.posts.findIndex((id) => id.toString() === post._id.toString());
                     if (indexPost !== -1) {
+                        const newImages: IImage[] = [];
+                        for (let index = 0; index < post.images.length; index++) {
+                            const img = post.images[index];
+                            const url = await this.cloudinaryService.getImageUrl(img.publicId);
+                            newImages.push({
+                                url,
+                                orientation: img.orientation,
+                            });
+                        }
+
                         newUnionPostsWithUser.push({
                             userId: user._id,
                             name: user.name,
-                            avatar: user.avatar,
+                            avatar: await this.cloudinaryService.getImageUrl(user.avatar),
                             _id: post._id,
                             content: post.content,
                             feeling: post.feeling,
                             visibleFor: post.visibleFor,
-                            images: post.images,
+                            images: newImages,
                             createdAt: post.createdAt,
-                            comments: post.comments ? post.comments.length : 0,
+                            comments: post.comments.length,
                         });
-                        console.log('vo khong');
                     }
-                });
-            });
+                }
+            }
 
+            console.log('newUnionPostsWithUser: ', newUnionPostsWithUser);
             return handleResponse({
                 message: GET_POST_FOR_PAGINATION_SUCCESSFULLY,
                 data: newUnionPostsWithUser,
@@ -184,73 +225,75 @@ export class PostService {
         }
     }
 
-    // async findPostPagination(userId: string, limit: number, after: string) {
-    //     try {
-    //         console.log('limit: ', typeof limit);
-    //         const response = await this.getPostsForPagination(userId);
-    //         const posts: IResponsePost[] = response.data;
-    //         console.log('posts.length: ', posts.length);
+    async findPostPagination(userId: string, limit: number, after: string) {
+        try {
+            console.log('limit: ', limit);
+            const response = await this.getPostsForPagination(userId);
+            const posts = response.data;
+            console.log('posts: ', posts);
+            console.log('posts.length: ', posts.length);
 
-    //         if (after) {
-    //             const indexAfter = posts.findIndex((post) => post._id.toString() === after);
-    //             console.log('indexAfter: ', indexAfter);
-    //             if (indexAfter) {
-    //                 if (indexAfter + limit < posts.length) {
-    //                     return handleResponse({
-    //                         message: GET_POST_PAGINATION_SUCCESSFULLY,
-    //                         data: {
-    //                             posts: posts.slice(indexAfter, indexAfter + limit),
-    //                             after: posts[indexAfter + limit]._id,
-    //                             ended: false,
-    //                         },
-    //                     });
-    //                 } else {
-    //                     return handleResponse({
-    //                         message: GET_POST_PAGINATION_SUCCESSFULLY,
-    //                         data: {
-    //                             posts: posts.slice(indexAfter),
-    //                             after: '',
-    //                             ended: true,
-    //                         },
-    //                     });
-    //                 }
-    //             } else {
-    //                 return handleResponse({
-    //                     message: GET_POST_PAGINATION_SUCCESSFULLY,
-    //                     data: {
-    //                         posts: [],
-    //                         after: '',
-    //                         ended: true,
-    //                     },
-    //                 });
-    //             }
-    //         } else {
-    //             if (posts.length > limit) {
-    //                 return handleResponse({
-    //                     message: GET_POST_PAGINATION_SUCCESSFULLY,
-    //                     data: {
-    //                         posts: posts.slice(0, limit),
-    //                         after: posts[limit]._id,
-    //                         ended: false,
-    //                     },
-    //                 });
-    //             } else {
-    //                 return handleResponse({
-    //                     message: GET_POST_PAGINATION_SUCCESSFULLY,
-    //                     data: {
-    //                         posts: posts,
-    //                         after: '',
-    //                         ended: true,
-    //                     },
-    //                 });
-    //             }
-    //         }
-    //     } catch (error) {
-    //         console.log('error: ', error);
-    //         return handleResponse({
-    //             error: error.response?.error || ERROR_GET_POST_PAGINATION,
-    //             statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
-    //         });
-    //     }
-    // }
+            if (after) {
+                const indexAfter = posts.findIndex((post) => post._id.toString() === after);
+                console.log('indexAfter: ', indexAfter);
+                if (indexAfter) {
+                    if (indexAfter + limit < posts.length) {
+                        return handleResponse({
+                            message: GET_POST_PAGINATION_SUCCESSFULLY,
+                            data: {
+                                posts: posts.slice(indexAfter, indexAfter + limit),
+                                after: posts[indexAfter + limit]._id,
+                                ended: false,
+                            },
+                        });
+                    } else {
+                        return handleResponse({
+                            message: GET_POST_PAGINATION_SUCCESSFULLY,
+                            data: {
+                                posts: posts.slice(indexAfter),
+                                after: '',
+                                ended: true,
+                            },
+                        });
+                    }
+                } else {
+                    return handleResponse({
+                        message: GET_POST_PAGINATION_SUCCESSFULLY,
+                        data: {
+                            posts: [],
+                            after: '',
+                            ended: true,
+                        },
+                    });
+                }
+            } else {
+                if (posts.length > limit) {
+                    return handleResponse({
+                        message: GET_POST_PAGINATION_SUCCESSFULLY,
+                        data: {
+                            posts: posts.slice(0, limit),
+                            after: posts[limit]._id,
+                            ended: false,
+                        },
+                    });
+                } else {
+                    console.log('vo khong');
+                    return handleResponse({
+                        message: GET_POST_PAGINATION_SUCCESSFULLY,
+                        data: {
+                            posts: posts,
+                            after: '',
+                            ended: true,
+                        },
+                    });
+                }
+            }
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: error.response?.error || ERROR_GET_POST_PAGINATION,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
 }

@@ -8,5 +8,6 @@ import { Feeling, FeelingSchema } from '../../schemas/feeling.schema';
     imports: [MongooseModule.forFeature([{ name: Feeling.name, schema: FeelingSchema }])],
     providers: [FeelingService],
     controllers: [FeelingController],
+    exports: [FeelingService],
 })
 export class FeelingModule {}

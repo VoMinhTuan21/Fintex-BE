@@ -15,6 +15,7 @@ import { CreateCommentDto, GetParentCommentsDto, UpdateCommentDto } from '../../
 import { handleResponse } from '../../dto/response';
 import { Comment, CommentDocument } from '../../schemas';
 import { Image } from '../../types/classes';
+import { Orientation } from '../../types/enums/orientation';
 import { ICommentsIdPaginate } from '../../types/post';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { PostService } from '../post/post.service';
@@ -66,7 +67,7 @@ export class CommentService {
         try {
             const imageComment: Image = {
                 publicId: '',
-                orientation: 'vertical',
+                orientation: Orientation.Vertical,
             };
 
             let level = 1;
@@ -87,7 +88,7 @@ export class CommentService {
                 const { height, width, public_id } = await this.cloudinaryService.uploadImage(dto.image, 'comment');
 
                 imageComment.publicId = public_id;
-                imageComment.orientation = height >= width ? 'vertical' : 'horizontal';
+                imageComment.orientation = height >= width ? Orientation.Vertical : Orientation.Horizontal;
             }
 
             const result = await this.commentModel.create({
@@ -134,7 +135,7 @@ export class CommentService {
                 const { height, width, public_id } = await this.cloudinaryService.uploadImage(dto.image, 'comment');
 
                 comment.image.publicId = public_id;
-                comment.image.orientation = height >= width ? 'vertical' : 'horizontal';
+                comment.image.orientation = height >= width ? Orientation.Vertical : Orientation.Horizontal;
             }
 
             (comment.content = dto.content), (comment.isNew = false);

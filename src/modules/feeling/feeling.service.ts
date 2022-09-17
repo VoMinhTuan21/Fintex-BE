@@ -15,7 +15,6 @@ import {
 import { handleResponse } from '../../dto/response';
 import { Feeling, FeelingDocument } from '../../schemas/feeling.schema';
 import { IFeeling, IFeelingUpdate } from '../../types/post';
-import { Image } from '../../types/classes';
 
 @Injectable()
 export class FeelingService {
@@ -89,7 +88,7 @@ export class FeelingService {
 
     async findAll() {
         try {
-            const feelings = await this.feelingModel.find();
+            const feelings = await this.feelingModel.find().select('name emoji');
             return handleResponse({
                 message: FIND_ALL_FEELING_SUCCESSFULLY,
                 data: feelings,
@@ -115,5 +114,12 @@ export class FeelingService {
                 statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
             });
         }
+    }
+
+    async findById(id: string) {
+        if (!id) {
+            return undefined;
+        }
+        return await this.feelingModel.findById(id).select('name emoji');
     }
 }
