@@ -4,9 +4,11 @@ import mongoose, { Model } from 'mongoose';
 import {
     CREATE_POST_SUCCESSFULLY,
     DELETE_COMMENT_SUCCESS,
+    DELETE_REACTION_POST_SUCCESSFULLY,
     ERROR_ADD_COMMENT_TO_POST,
     ERROR_CREATE_POST,
     ERROR_DELETE_COMMENT_POST,
+    ERROR_DELETE_REACTION_POST,
     ERROR_GET_COMMENT_POST,
     ERROR_GET_FRIEND_POST_ID,
     ERROR_GET_POST_FOR_PAGINATION,
@@ -14,8 +16,10 @@ import {
     ERROR_GET_STRANGER_POST_IDS,
     ERROR_NOT_HAVE_PERMISSION,
     ERROR_POST_HAS_NO_DATA,
+    ERROR_REACTION_POST,
     GET_POST_FOR_PAGINATION_SUCCESSFULLY,
     GET_POST_PAGINATION_SUCCESSFULLY,
+    REACTION_POST_SUCCESSFULLY,
 } from '../../constances';
 import { handleResponse } from '../../dto/response';
 import { Post, PostDocument } from '../../schemas/post.schema';
@@ -85,6 +89,7 @@ export class PostService {
                 feeling: feelingDetail,
                 visibleFor: post.visibleFor,
                 images: newImages,
+                reactions: [],
                 comments: 0,
                 createdAt: new Date().toISOString(),
             };
@@ -173,7 +178,8 @@ export class PostService {
                     },
                     { updatedAt: 0, __v: 0 },
                 )
-                .populate('feeling', 'name emoji');
+                .populate('feeling', 'name emoji')
+                .populate('reactions.user', 'name');
             if (!unionPosts) {
                 return handleResponse({
                     error: ERROR_GET_STRANGER_POST_IDS,
@@ -197,6 +203,7 @@ export class PostService {
                                 orientation: img.orientation,
                             });
                         }
+                        //Todo: count reaction of each types
 
                         newUnionPostsWithUser.push({
                             userId: user._id,
@@ -209,12 +216,13 @@ export class PostService {
                             images: newImages,
                             createdAt: post.createdAt,
                             comments: post.comments.length,
+                            reactions: post.reactions,
                         });
                     }
                 }
             }
 
-            console.log('newUnionPostsWithUser: ', newUnionPostsWithUser);
+            // console.log('newUnionPostsWithUser: ', newUnionPostsWithUser);
             return handleResponse({
                 message: GET_POST_FOR_PAGINATION_SUCCESSFULLY,
                 data: newUnionPostsWithUser,
@@ -230,11 +238,11 @@ export class PostService {
 
     async findPostPagination(userId: string, limit: number, after: string) {
         try {
-            console.log('limit: ', limit);
+            // console.log('limit: ', limit);
             const response = await this.getPostsForPagination(userId);
             const posts = response.data;
-            console.log('posts: ', posts);
-            console.log('posts.length: ', posts.length);
+            // console.log('posts: ', posts);
+            // console.log('posts.length: ', posts.length);
 
             if (after) {
                 const indexAfter = posts.findIndex((post) => post._id.toString() === after);
@@ -368,5 +376,68 @@ export class PostService {
         }
 
         return comments[index + 1].toString();
+    }
+
+    async reactionPost(userId: string, postId: string, type: string) {
+        try {
+            const post = await this.postModel.findById(postId);
+            const oldReaction = post.reactions.find((item) => item.user.toString() === userId.toString());
+            if (oldReaction) {
+                oldReaction.type = type;
+                oldReaction.user = new mongoose.Types.ObjectId(userId).toString();
+            } else {
+                post.reactions.push({
+                    type,
+                    user: new mongoose.Types.ObjectId(userId).toString(),
+                });
+            }
+
+            await post.save();
+            const user = await this.userService.findById(userId);
+
+            return handleResponse({
+                message: REACTION_POST_SUCCESSFULLY,
+                data: {
+                    postId,
+                    reaction: {
+                        type,
+                        user: {
+                            _id: user._id,
+                            name: user.name,
+                        },
+                    },
+                },
+            });
+        } catch (error) {
+            console.log(error);
+            return handleResponse({
+                error: error.response?.error || ERROR_REACTION_POST,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async deleteReactionPost(userId: string, postId: string) {
+        try {
+            await this.postModel.findByIdAndUpdate(postId, {
+                $pull: {
+                    reactions: { user: new mongoose.Types.ObjectId(userId) },
+                },
+            });
+
+            return handleResponse({
+                message: DELETE_REACTION_POST_SUCCESSFULLY,
+                data: {
+                    postId,
+                    userId,
+                },
+            });
+        } catch (error) {
+            console.log(error);
+            return handleResponse({
+                error: error.response?.error || ERROR_DELETE_REACTION_POST,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
     }
 }

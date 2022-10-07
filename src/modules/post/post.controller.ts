@@ -3,6 +3,7 @@ import {
     Controller,
     Delete,
     Get,
+    Param,
     Post,
     Query,
     Req,
@@ -11,7 +12,13 @@ import {
     UseInterceptors,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
-import { CreatePostDto, DeleteCommentDto, PostPaginationDto } from '../../dto/request/post.dto';
+import {
+    CreatePostDto,
+    DeleteCommentDto,
+    DeleteReactionPostDto,
+    PostPaginationDto,
+    ReactionPostDto,
+} from '../../dto/request/post.dto';
 import { JwtGuard } from '../../guards/jwt.guard';
 import { PostService } from './post.service';
 import { Request } from 'express';
@@ -84,5 +91,19 @@ export class PostController {
     @UseGuards(JwtGuard)
     async deleteComment(@Body() dto: DeleteCommentDto, @Req() req: Request) {
         return this.postService.deleteComment(dto.postId, dto.commentId, (req.user as IJWTInfo)._id);
+    }
+
+    @Post('/reaction')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    async reactionPost(@Body() dto: ReactionPostDto, @Req() req: Request) {
+        return this.postService.reactionPost((req.user as IJWTInfo)._id, dto.postId, dto.type);
+    }
+
+    @Delete('/reaction/:postId')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    async DeleteReactionPost(@Param('postId') postId: string, @Req() req: Request) {
+        return this.postService.deleteReactionPost((req.user as IJWTInfo)._id, postId);
     }
 }

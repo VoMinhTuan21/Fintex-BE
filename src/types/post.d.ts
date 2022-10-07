@@ -31,11 +31,10 @@ declare interface IReaction {
 declare interface IUserReaction {
     _id: string;
     name: IName;
-    avatar: string;
 }
 
 declare interface IPostReaction {
-    type: IReaction;
+    type: string;
     user: IUserReaction;
 }
 
@@ -48,7 +47,7 @@ declare interface IResPost {
         publicId: string;
         orientation: Orientation;
     }[];
-    reaction: IPostReaction[];
+    reactions: IPostReaction[];
     comments: string[];
     createdAt: string;
 }

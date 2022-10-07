@@ -11,7 +11,7 @@ export class PostResDto {
     visibleFor: VisibleFor;
     images: Image[];
     reaction: {
-        type: ReactionDocument;
+        type: string;
         user: UserDocument;
     }[];
     createdAt: string;

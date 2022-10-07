@@ -44,13 +44,13 @@ export class Post {
     @Prop({
         type: [
             {
-                type: { type: mongoose.Schema.Types.ObjectId, ref: 'Reaction' },
-                userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+                type: { type: String },
+                user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
             },
         ],
     })
     reactions: {
-        type: ReactionDocument | string;
+        type: string;
         user: UserDocument | string;
     }[];
 }

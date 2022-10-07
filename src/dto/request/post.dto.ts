@@ -94,3 +94,22 @@ export class DeleteCommentDto {
     @IsNotEmpty()
     commentId: string;
 }
+
+export class ReactionPostDto {
+    @ApiProperty({ type: String })
+    @IsMongoId()
+    @IsNotEmpty()
+    postId: string;
+
+    @ApiProperty({ type: String })
+    @IsString()
+    @IsNotEmpty()
+    type: string;
+}
+
+export class DeleteReactionPostDto {
+    @ApiProperty({ type: String })
+    @IsMongoId()
+    @IsNotEmpty()
+    postId: string;
+}
