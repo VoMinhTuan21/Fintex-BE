@@ -165,6 +165,8 @@ export class PostService {
             }
 
             const unionPostsWithUser: PostIdWithUser[] = [...friendPostIds, ...strangerPostIds];
+            // const unionPostsWithUser: PostIdWithUser[] = [...strangerPostIds];
+
             const postIds: string[] = [];
             unionPostsWithUser.forEach((item) => {
                 item.posts.forEach((id) => postIds.push(id));

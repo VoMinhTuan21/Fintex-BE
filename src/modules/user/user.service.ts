@@ -84,6 +84,7 @@ export class UserService {
                                 foreignField: '_id',
                                 pipeline: [
                                     { $match: { $expr: { $gt: ['$createdAt', timeNow] } } },
+                                    { $match: { visibleFor: { $in: ['public', 'friends'] } } },
                                     {
                                         $project: {
                                             _id: 1,
@@ -131,6 +132,7 @@ export class UserService {
                         foreignField: '_id',
                         pipeline: [
                             { $match: { $expr: { $gt: ['$createdAt', timeNow] } } },
+                            { $match: { $expr: { $eq: ['$visibleFor', 'public'] } } },
                             {
                                 $project: {
                                     _id: 1,
