@@ -158,6 +158,10 @@ export class UserService {
         }
     }
 
+    async findMyPostIds(userId: string) {
+        return await this.userModel.findById(userId).select('avatar name posts');
+    }
+
     mapPostWithUser(arr: any[]) {
         const postIdWithUser: PostIdWithUser[] = [];
         arr.forEach((post) => {

@@ -83,6 +83,19 @@ export class PostController {
             (req.user as IJWTInfo)._id,
             parseInt(paginate.limit),
             paginate.after,
+            'all',
+        );
+    }
+
+    @Get('/mine/pagination?')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    async getMinePaginationPosts(@Req() req: Request, @Query() paginate: PostPaginationDto) {
+        return await this.postService.findPostPagination(
+            (req.user as IJWTInfo)._id,
+            parseInt(paginate.limit),
+            paginate.after,
+            'mine',
         );
     }
 
@@ -105,5 +118,12 @@ export class PostController {
     @UseGuards(JwtGuard)
     async DeleteReactionPost(@Param('postId') postId: string, @Req() req: Request) {
         return this.postService.deleteReactionPost((req.user as IJWTInfo)._id, postId);
+    }
+
+    @Get('/my-posts-for-pagination')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    async getMyPostForPagination(@Req() req: Request) {
+        return this.postService.getMyPostForPagination((req.user as IJWTInfo)._id);
     }
 }

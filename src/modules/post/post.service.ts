@@ -11,12 +11,14 @@ import {
     ERROR_DELETE_REACTION_POST,
     ERROR_GET_COMMENT_POST,
     ERROR_GET_FRIEND_POST_ID,
+    ERROR_GET_MY_POST_FOR_PAGINATION,
     ERROR_GET_POST_FOR_PAGINATION,
     ERROR_GET_POST_PAGINATION,
     ERROR_GET_STRANGER_POST_IDS,
     ERROR_NOT_HAVE_PERMISSION,
     ERROR_POST_HAS_NO_DATA,
     ERROR_REACTION_POST,
+    GET_MY_POST_FOR_PAGINATION_SUCCESSFULLY,
     GET_POST_FOR_PAGINATION_SUCCESSFULLY,
     GET_POST_PAGINATION_SUCCESSFULLY,
     REACTION_POST_SUCCESSFULLY,
@@ -165,7 +167,6 @@ export class PostService {
             }
 
             const unionPostsWithUser: PostIdWithUser[] = [...friendPostIds, ...strangerPostIds];
-            // const unionPostsWithUser: PostIdWithUser[] = [...strangerPostIds];
 
             const postIds: string[] = [];
             unionPostsWithUser.forEach((item) => {
@@ -238,10 +239,15 @@ export class PostService {
         }
     }
 
-    async findPostPagination(userId: string, limit: number, after: string) {
+    async findPostPagination(userId: string, limit: number, after: string, type: 'all' | 'mine' | 'person') {
         try {
-            // console.log('limit: ', limit);
-            const response = await this.getPostsForPagination(userId);
+            let response: { data: any; message?: string };
+            if (type === 'all') {
+                response = await this.getPostsForPagination(userId);
+            } else if (type === 'mine') {
+                response = await this.getMyPostForPagination(userId);
+            }
+
             const posts = response.data;
             // console.log('posts: ', posts);
             // console.log('posts.length: ', posts.length);
@@ -438,6 +444,73 @@ export class PostService {
             console.log(error);
             return handleResponse({
                 error: error.response?.error || ERROR_DELETE_REACTION_POST,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async getMyPostForPagination(userId: string) {
+        try {
+            const myPostIds = await this.userService.findMyPostIds(userId);
+            if (!myPostIds) {
+                return handleResponse({
+                    error: ERROR_GET_MY_POST_FOR_PAGINATION,
+                    statusCode: HttpStatus.BAD_REQUEST,
+                });
+            }
+
+            const myPosts: IResPost[] = await this.postModel
+                .find(
+                    {
+                        _id: { $in: myPostIds.posts },
+                    },
+                    { updatedAt: 0, __v: 0 },
+                )
+                .sort({ createdAt: -1 })
+                .populate('feeling', 'name emoji')
+                .populate('reactions.user', 'name');
+
+            const newUnionPostsWithUser = [];
+            for (let i = 0; i < myPosts.length; i++) {
+                const post = myPosts[i];
+
+                const indexPost = myPostIds.posts.findIndex((id) => id.toString() === post._id.toString());
+                if (indexPost !== -1) {
+                    const newImages: IImage[] = [];
+                    for (let index = 0; index < post.images.length; index++) {
+                        const img = post.images[index];
+                        const url = await this.cloudinaryService.getImageUrl(img.publicId);
+                        newImages.push({
+                            url,
+                            orientation: img.orientation,
+                        });
+                    }
+                    //Todo: count reaction of each types
+
+                    newUnionPostsWithUser.push({
+                        userId: myPostIds._id,
+                        name: myPostIds.name,
+                        avatar: await this.cloudinaryService.getImageUrl(myPostIds.avatar),
+                        _id: post._id,
+                        content: post.content,
+                        feeling: post.feeling,
+                        visibleFor: post.visibleFor,
+                        images: newImages,
+                        createdAt: post.createdAt,
+                        comments: post.comments.length,
+                        reactions: post.reactions,
+                    });
+                }
+            }
+
+            return handleResponse({
+                message: GET_MY_POST_FOR_PAGINATION_SUCCESSFULLY,
+                data: newUnionPostsWithUser,
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: error.response?.error || ERROR_GET_MY_POST_FOR_PAGINATION,
                 statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
             });
         }
