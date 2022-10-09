@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Comment, CommentSchema } from '../../schemas';
+import { CommentSchema, Comment } from '../../schemas/comment.schema';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 import { PostModule } from '../post/post.module';
 import { CommentController } from './comment.controler';

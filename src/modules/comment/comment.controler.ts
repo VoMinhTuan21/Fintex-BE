@@ -16,7 +16,13 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
-import { CreateCommentDto, GetParentCommentsDto, UpdateCommentDto } from '../../dto/request';
+import {
+    CreateCommentDto,
+    DeleteCommentDto,
+    GetParentCommentsDto,
+    ReactionCommentDto,
+    UpdateCommentDto,
+} from '../../dto/request';
 import { handleResponse } from '../../dto/response';
 import { JwtGuard } from '../../guards/jwt.guard';
 import { imageFileFilter } from '../../utils';
@@ -85,9 +91,13 @@ export class CommentController {
 
     @ApiBearerAuth('access_token')
     @UseGuards(JwtGuard)
-    @Delete('/:id')
-    delete(@Param('id', ValidateMongoId) id: string, @Req() req: Request) {
-        return this.commentService.delelte(id, (req.user as IJWTInfo)._id);
+    @Delete(':commentId/:postId')
+    delete(
+        @Param('commentId', ValidateMongoId) commentId: string,
+        @Param('postId', ValidateMongoId) postId: string,
+        @Req() req: Request,
+    ) {
+        return this.commentService.delelte(commentId, (req.user as IJWTInfo)._id, postId);
     }
 
     @Get('/:postId?')
@@ -102,5 +112,10 @@ export class CommentController {
         @Query() query: GetParentCommentsDto,
     ) {
         return this.commentService.getCommentChildren(postId, parentId, parseInt(query.limit), query.after);
+    }
+
+    @Post('/reaction')
+    reaction(@Body() dto: ReactionCommentDto) {
+        return 'haha';
     }
 }

@@ -1,11 +1,11 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { Document } from 'mongoose';
-import { VisibleFor } from '../types/enums';
 import { FeelingDocument } from './feeling.schema';
 import { ReactionDocument } from './reaction.schema';
 import { UserDocument } from './user.schema';
 import { Image } from '../types/classes';
 import { CommentDocument } from './comment.schema';
+import { VisibleFor } from '../types/enums/visible-for';
 
 export type PostDocument = Post & Document;
 

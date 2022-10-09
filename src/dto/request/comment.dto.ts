@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsMongoId, IsNotEmpty, IsNumberString, IsOptional } from 'class-validator';
+import { IsEnum, IsMongoId, IsNotEmpty, IsNumberString, IsOptional, IsString } from 'class-validator';
+import { ReactionEnum } from '../../constances';
 
 export class CreateCommentDto {
     @ApiPropertyOptional({ type: String })
@@ -57,4 +58,28 @@ export class GetParentCommentsDto {
     @IsOptional()
     @IsMongoId()
     after: string;
+}
+
+export class DeleteCommentDto {
+    @ApiProperty({ type: String })
+    @IsMongoId()
+    @IsNotEmpty()
+    id: string;
+
+    @ApiProperty({ type: String })
+    @IsMongoId()
+    @IsNotEmpty()
+    postId: string;
+}
+
+export class ReactionCommentDto {
+    @ApiProperty({ type: String })
+    @IsMongoId()
+    @IsNotEmpty()
+    commentId: string;
+
+    @ApiProperty({ type: String, enum: ReactionEnum })
+    @IsString()
+    @IsNotEmpty()
+    type: string;
 }

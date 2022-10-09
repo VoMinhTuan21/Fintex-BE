@@ -9,8 +9,8 @@ import {
     IsOptional,
     IsString,
 } from 'class-validator';
-import { VisibleFor } from '../../types/enums';
 import { Orientation } from '../../types/enums/orientation';
+import { VisibleFor } from '../../types/enums/visible-for';
 
 export class CreateFeelingDto {
     @ApiProperty({ type: String })
@@ -83,17 +83,17 @@ export class PostPaginationDto {
     after: string;
 }
 
-export class DeleteCommentDto {
-    @ApiProperty({ type: String })
-    @IsMongoId()
-    @IsNotEmpty()
-    postId: string;
+// export class DeleteCommentDto {
+//     @ApiProperty({ type: String })
+//     @IsMongoId()
+//     @IsNotEmpty()
+//     postId: string;
 
-    @ApiProperty({ type: String })
-    @IsMongoId()
-    @IsNotEmpty()
-    commentId: string;
-}
+//     @ApiProperty({ type: String })
+//     @IsMongoId()
+//     @IsNotEmpty()
+//     commentId: string;
+// }
 
 export class ReactionPostDto {
     @ApiProperty({ type: String })

@@ -15,7 +15,7 @@ import {
 import { CreateCommentDto, UpdateCommentDto } from '../../dto/request';
 import { handleResponse } from '../../dto/response';
 import { CommnentResDto, CreateCommentResDto } from '../../dto/response/comment.dto';
-import { Comment, CommentDocument } from '../../schemas';
+import { Comment, CommentDocument } from '../../schemas/comment.schema';
 import { ICommentsIdPaginate } from '../../types/post';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { PostService } from '../post/post.service';
@@ -256,7 +256,7 @@ export class CommentService {
         }
     }
 
-    async delelte(id: string, userId: string) {
+    async delelte(id: string, userId: string, postId: string) {
         try {
             const comment = await this.commentModel.findById(id);
             if (!comment) {
@@ -277,10 +277,16 @@ export class CommentService {
                 this.cloudinaryService.deleteImage(comment.image);
             }
 
+            if (!comment.parentId) {
+                await this.postService.deleteComment(postId, id, userId);
+            }
+
+            const childrenId = await this.deleteChildComment(id);
+
             comment.delete();
             return handleResponse({
                 message: DELETE_COMMENT_SUCCESS,
-                data: id,
+                data: [id, ...childrenId],
             });
         } catch (error) {
             console.log(error);
@@ -289,5 +295,26 @@ export class CommentService {
                 statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
             });
         }
+    }
+
+    async deleteChildComment(id: string) {
+        const children = await this.commentModel.find({ parentId: id });
+        if (children.length === 0) {
+            return [];
+        }
+        const result = [];
+        for (const item of children) {
+            result.push(item._id);
+            if (item.level !== 3) {
+                const outcome = await this.deleteChildComment(item._id);
+                result.push(...outcome);
+            }
+            if (item.image) {
+                this.cloudinaryService.deleteImage(item.image);
+            }
+            item.delete();
+        }
+
+        return result;
     }
 }
