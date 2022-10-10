@@ -89,17 +89,6 @@ export class CommentController {
         return this.commentService.update(dto, (req.user as IJWTInfo)._id);
     }
 
-    @ApiBearerAuth('access_token')
-    @UseGuards(JwtGuard)
-    @Delete(':commentId/:postId')
-    delete(
-        @Param('commentId', ValidateMongoId) commentId: string,
-        @Param('postId', ValidateMongoId) postId: string,
-        @Req() req: Request,
-    ) {
-        return this.commentService.delelte(commentId, (req.user as IJWTInfo)._id, postId);
-    }
-
     @Get('/:postId?')
     getParentComments(@Param('postId', ValidateMongoId) postId: string, @Query() query: GetParentCommentsDto) {
         return this.commentService.getCommentParent(postId, parseInt(query.limit), query.after);
@@ -119,5 +108,23 @@ export class CommentController {
     @Post('/reaction')
     reaction(@Body() dto: ReactionCommentDto, @Req() req: Request) {
         return this.commentService.reaction(dto.commentId, dto.type, (req.user as IJWTInfo)._id);
+    }
+
+    @Delete('/all-comments-of-post/:id')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    deleteAllCommentsOfPost(@Param('id', ValidateMongoId) id: string) {
+        return this.commentService.deleteAllCommentOfPost(id);
+    }
+
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    @Delete(':commentId/:postId')
+    delete(
+        @Param('commentId', ValidateMongoId) commentId: string,
+        @Param('postId', ValidateMongoId) postId: string,
+        @Req() req: Request,
+    ) {
+        return this.commentService.delete(commentId, (req.user as IJWTInfo)._id, postId);
     }
 }

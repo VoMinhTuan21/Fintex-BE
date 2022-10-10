@@ -1,6 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
+import { ERROR_DELETE_POST } from '../../constances';
+import { handleResponse } from '../../dto/response';
 import { User, UserDocument } from '../../schemas/user.schema';
 import { PostIdWithUser } from '../../types/classes';
 import { hashPasswords } from '../../utils';
@@ -161,6 +163,20 @@ export class UserService {
 
     async findMyPostIds(userId: string) {
         return await this.userModel.findById(userId).select('avatar name posts');
+    }
+
+    async deletePost(userId: string, postId: string) {
+        try {
+            await this.userModel.findByIdAndUpdate(userId, {
+                $pull: { posts: postId },
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: error.response?.error || ERROR_DELETE_POST,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
     }
 
     mapPostWithUser(arr: any[]) {

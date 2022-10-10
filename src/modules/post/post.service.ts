@@ -4,10 +4,12 @@ import mongoose, { Model } from 'mongoose';
 import {
     CREATE_POST_SUCCESSFULLY,
     DELETE_COMMENT_SUCCESS,
+    DELETE_POST_SUCCESSFULLY,
     DELETE_REACTION_POST_SUCCESSFULLY,
     ERROR_ADD_COMMENT_TO_POST,
     ERROR_CREATE_POST,
     ERROR_DELETE_COMMENT_POST,
+    ERROR_DELETE_POST,
     ERROR_DELETE_REACTION_POST,
     ERROR_GET_COMMENT_POST,
     ERROR_GET_FRIEND_POST_ID,
@@ -597,6 +599,33 @@ export class PostService {
             console.log('error: ', error);
             return handleResponse({
                 error: error.response?.error || ERROR_UPDATE_POST,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async getParentCommentIds(postId: string) {
+        const post = await this.postModel.findById(postId).select('comments');
+        return post.comments;
+    }
+
+    async deletePost(useId: string, postId: string) {
+        try {
+            await this.userService.deletePost(useId, postId);
+            const post = await this.postModel.findOneAndDelete({ _id: postId });
+
+            post.images.forEach((item) => {
+                this.cloudinaryService.deleteImage(item.publicId);
+            });
+
+            return handleResponse({
+                message: DELETE_POST_SUCCESSFULLY,
+                data: postId,
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: error.response?.error || ERROR_DELETE_POST,
                 statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
             });
         }

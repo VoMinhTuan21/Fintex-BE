@@ -19,6 +19,7 @@ import { PostService } from './post.service';
 import { Request } from 'express';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { imageFileFilter } from '../../utils';
+import { ValidateMongoId } from '../../utils/validate-pipe';
 
 @ApiTags('Post')
 @Controller('post')
@@ -138,5 +139,12 @@ export class PostController {
         @UploadedFiles() images: Array<Express.Multer.File>,
     ) {
         return await this.postService.updatePost(id, updatedPost, images);
+    }
+
+    @Delete('/:postId')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    async deletePost(@Param('postId', ValidateMongoId) postId: string, @Req() req: Request) {
+        return this.postService.deletePost((req.user as IJWTInfo)._id, postId);
     }
 }
