@@ -114,8 +114,10 @@ export class CommentController {
         return this.commentService.getCommentChildren(postId, parentId, parseInt(query.limit), query.after);
     }
 
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
     @Post('/reaction')
-    reaction(@Body() dto: ReactionCommentDto) {
-        return 'haha';
+    reaction(@Body() dto: ReactionCommentDto, @Req() req: Request) {
+        return this.commentService.reaction(dto.commentId, dto.type, (req.user as IJWTInfo)._id);
     }
 }

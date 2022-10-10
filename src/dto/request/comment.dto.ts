@@ -81,5 +81,5 @@ export class ReactionCommentDto {
     @ApiProperty({ type: String, enum: ReactionEnum })
     @IsString()
     @IsNotEmpty()
-    type: string;
+    type: ReactionEnum;
 }

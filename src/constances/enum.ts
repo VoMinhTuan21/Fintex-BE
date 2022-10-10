@@ -1,7 +1,7 @@
 export enum ReactionEnum {
     LIKE = 'like',
     HAHA = 'haha',
-    WOA = 'woa',
+    WOW = 'wow',
     SAD = 'sad',
     ANGRY = 'angry',
     LOVE = 'love',
