@@ -531,7 +531,7 @@ export class PostService {
             }
             const newImages: IImage[] = [];
 
-            const oldPost = await this.postModel.findById(postId);
+            const oldPost = await this.postModel.findById(postId).populate('reactions.user', 'name');
             if (deletedImages) {
                 oldPost.images.forEach((item) => {
                     this.cloudinaryService.deleteImage(item.publicId);
