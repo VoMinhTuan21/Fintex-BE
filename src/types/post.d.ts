@@ -17,6 +17,13 @@ declare interface ICreatePost {
     visibleFor: VisibleFor;
 }
 
+declare interface IUpdatePost {
+    content?: string;
+    feeling?: string;
+    visibleFor: VisibleFor;
+    deletedImages: boolean;
+}
+
 declare interface IImage {
     url: string;
     orientation: Orientation;

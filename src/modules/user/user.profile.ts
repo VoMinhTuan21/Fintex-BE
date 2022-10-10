@@ -37,6 +37,10 @@ export class UserProfile extends AutomapperProfile {
                     mapFrom((source) => source.avatar),
                 ),
                 forMember(
+                    (destination) => destination.coverPhoto,
+                    mapFrom((source) => source.coverPhoto),
+                ),
+                forMember(
                     (destination) => destination.birthday,
                     mapFrom((source) => source.birthday),
                 ),

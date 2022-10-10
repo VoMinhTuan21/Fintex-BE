@@ -5,6 +5,7 @@ import {
     Get,
     Param,
     Post,
+    Put,
     Query,
     Req,
     UploadedFiles,
@@ -16,14 +17,17 @@ import {
     CreatePostDto,
     DeleteCommentDto,
     DeleteReactionPostDto,
+    FormPostDto,
     PostPaginationDto,
     ReactionPostDto,
+    UpdatePostDto,
 } from '../../dto/request/post.dto';
 import { JwtGuard } from '../../guards/jwt.guard';
 import { PostService } from './post.service';
 import { Request } from 'express';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { imageFileFilter } from '../../utils';
+import { object } from 'joi';
 
 @ApiTags('Post')
 @Controller('post')
@@ -125,5 +129,23 @@ export class PostController {
     @UseGuards(JwtGuard)
     async getMyPostForPagination(@Req() req: Request) {
         return this.postService.getMyPostForPagination((req.user as IJWTInfo)._id);
+    }
+
+    @Put('/:id')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    @UseInterceptors(
+        FilesInterceptor('images', 10, {
+            fileFilter: imageFileFilter,
+        }),
+    )
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({ type: UpdatePostDto })
+    async updatePost(
+        @Param('id') id: string,
+        @Body() updatedPost: UpdatePostDto,
+        @UploadedFiles() images: Array<Express.Multer.File>,
+    ) {
+        return await this.postService.updatePost(id, updatedPost, images);
     }
 }

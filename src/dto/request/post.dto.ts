@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
     IsArray,
+    IsBoolean,
     IsEnum,
     IsMongoId,
     IsNotEmpty,
@@ -112,4 +114,42 @@ export class DeleteReactionPostDto {
     @IsMongoId()
     @IsNotEmpty()
     postId: string;
+}
+
+export class FormPostDto {
+    @ApiPropertyOptional({ type: String })
+    @IsOptional()
+    @IsString()
+    @IsNotEmpty()
+    content?: string;
+
+    @ApiPropertyOptional({ type: String })
+    @IsOptional()
+    @IsMongoId()
+    @IsNotEmpty()
+    feeling?: string;
+
+    @ApiProperty({ enum: VisibleFor, default: VisibleFor.Public })
+    @IsEnum(VisibleFor)
+    @IsNotEmpty()
+    visibleFor: VisibleFor;
+
+    @ApiPropertyOptional({
+        type: 'array',
+        items: {
+            type: 'string',
+            format: 'binary',
+        },
+        nullable: true,
+    })
+    images?: Array<Express.Multer.File>;
+}
+
+export class UpdatePostDto extends FormPostDto {
+    @ApiProperty({ type: Boolean })
+    @Transform(({ value }) => {
+        return value === 'true' || value === true || value === 1 || value === '1';
+    })
+    @IsBoolean()
+    deletedImages: boolean;
 }

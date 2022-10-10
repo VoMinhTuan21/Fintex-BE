@@ -18,16 +18,18 @@ import {
     ERROR_NOT_HAVE_PERMISSION,
     ERROR_POST_HAS_NO_DATA,
     ERROR_REACTION_POST,
+    ERROR_UPDATE_POST,
     GET_MY_POST_FOR_PAGINATION_SUCCESSFULLY,
     GET_POST_FOR_PAGINATION_SUCCESSFULLY,
     GET_POST_PAGINATION_SUCCESSFULLY,
     REACTION_POST_SUCCESSFULLY,
+    UPDATE_POST_SUCCESSFULLY,
 } from '../../constances';
 import { handleResponse } from '../../dto/response';
 import { Post, PostDocument } from '../../schemas/post.schema';
 import { Image, PostIdWithUser } from '../../types/classes';
 import { Orientation } from '../../types/enums/orientation';
-import { ICommentsIdPaginate, ICreatePost, IImage, IResPost } from '../../types/post';
+import { ICommentsIdPaginate, ICreatePost, IImage, IResPost, IUpdatePost } from '../../types/post';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { FeelingService } from '../feeling/feeling.service';
 import { UserService } from '../user/user.service';
@@ -511,6 +513,90 @@ export class PostService {
             console.log('error: ', error);
             return handleResponse({
                 error: error.response?.error || ERROR_GET_MY_POST_FOR_PAGINATION,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async updatePost(postId: string, updatePost: IUpdatePost, imageFiles: Array<Express.Multer.File>) {
+        try {
+            console.log('imageFiles: ', imageFiles);
+            console.log('updatePost: ', updatePost);
+            const { content, feeling, visibleFor, deletedImages } = updatePost;
+            if (!content && !feeling && !imageFiles && !visibleFor) {
+                return handleResponse({
+                    error: ERROR_POST_HAS_NO_DATA,
+                    statusCode: HttpStatus.BAD_REQUEST,
+                });
+            }
+            const newImages: IImage[] = [];
+
+            const oldPost = await this.postModel.findById(postId);
+            if (deletedImages) {
+                oldPost.images.forEach((item) => {
+                    this.cloudinaryService.deleteImage(item.publicId);
+                });
+                oldPost.images = [];
+            }
+
+            if (imageFiles.length === 0) {
+                console.log('khong xoa hinh > lay hinh cu');
+                for (let index = 0; index < oldPost.images.length; index++) {
+                    const image = oldPost.images[index];
+                    const url = await this.cloudinaryService.getImageUrl(image.publicId);
+                    newImages.push({
+                        url,
+                        orientation: image.orientation,
+                    });
+                }
+            } else {
+                const images: Image[] = [];
+
+                for (let index = 0; index < imageFiles.length; index++) {
+                    const file = imageFiles[index];
+                    const { height, width, public_id, url } = await this.cloudinaryService.uploadImage(file, 'Fintex');
+                    const image: Image = {
+                        publicId: public_id,
+                        orientation: height >= width ? Orientation.Vertical : Orientation.Horizontal,
+                    };
+
+                    const imageRes: IImage = {
+                        url,
+                        orientation: height >= width ? Orientation.Vertical : Orientation.Horizontal,
+                    };
+
+                    newImages.push(imageRes);
+                    images.push(image);
+                }
+
+                oldPost.images = images;
+            }
+
+            oldPost.content = updatePost.content;
+            oldPost.feeling = updatePost.feeling;
+            oldPost.visibleFor = updatePost.visibleFor;
+
+            await oldPost.save();
+
+            const feelingDetail = await this.feelingService.findById(feeling);
+
+            const responsePost = {
+                _id: oldPost._id,
+                content: oldPost.content,
+                feeling: feelingDetail,
+                visibleFor: oldPost.visibleFor,
+                images: newImages,
+                reactions: oldPost.reactions,
+                comments: oldPost.comments.length,
+            };
+            return handleResponse({
+                message: UPDATE_POST_SUCCESSFULLY,
+                data: responsePost,
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: error.response?.error || ERROR_UPDATE_POST,
                 statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
             });
         }

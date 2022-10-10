@@ -9,6 +9,7 @@ export class UserResDto {
     email: string;
     phone: string;
     avatar: string;
+    coverPhoto: string;
     birthday: string;
     gender: Gender;
 }
