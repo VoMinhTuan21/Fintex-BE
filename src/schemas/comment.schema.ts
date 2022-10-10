@@ -1,7 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose from 'mongoose';
-import { PostDocument, ReactionDocument, UserDocument } from '.';
-import { Image } from '../types/classes';
+import { UserDocument } from './user.schema';
 
 export type CommentDocument = Comment & Document;
 
@@ -39,13 +38,13 @@ export class Comment {
     @Prop({
         type: [
             {
-                type: { type: mongoose.Schema.Types.ObjectId, ref: 'Reaction' },
+                type: { type: String },
                 userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
             },
         ],
     })
     reaction: {
-        type: ReactionDocument | string;
+        type: string;
         userId: UserDocument | string;
     }[];
 }

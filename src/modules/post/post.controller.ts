@@ -103,12 +103,12 @@ export class PostController {
         );
     }
 
-    @Delete('/comment')
-    @ApiBearerAuth('access_token')
-    @UseGuards(JwtGuard)
-    async deleteComment(@Body() dto: DeleteCommentDto, @Req() req: Request) {
-        return this.postService.deleteComment(dto.postId, dto.commentId, (req.user as IJWTInfo)._id);
-    }
+    // @Delete('/comment')
+    // @ApiBearerAuth('access_token')
+    // @UseGuards(JwtGuard)
+    // async deleteComment(@Body() dto: DeleteCommentDto, @Req() req: Request) {
+    //     return this.postService.deleteComment(dto.postId, dto.commentId, (req.user as IJWTInfo)._id);
+    // }
 
     @Post('/reaction')
     @ApiBearerAuth('access_token')

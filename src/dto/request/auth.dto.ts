@@ -61,14 +61,14 @@ export class AuthSignUpDto {
 }
 
 export class AuthSignInWithPhoneDto {
-    @ApiProperty({ type: String })
+    @ApiProperty({ type: String, default: '0988835462' })
     @IsNumberString()
     @IsNotEmpty()
     @Length(10)
     @Matches(/(((\+|)84)|0)(3|5|7|8|9)+([0-9]{8})\b/, { message: 'Malformed phone number' })
     phone: string;
 
-    @ApiProperty({ type: String, default: '123456789' })
+    @ApiProperty({ type: String, default: 'voxuantu@8121' })
     @IsNotEmpty()
     @Matches(/^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/, {
         message:

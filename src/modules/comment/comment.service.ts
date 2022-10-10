@@ -9,16 +9,20 @@ import {
     ERROR_NOT_FOUND,
     ERROR_NOT_HAVE_PERMISSION,
     ERROR_NOW_ALLOW_TO_REPLY_COMMENT_LEVEL_3,
+    ERROR_REACT_COMMENT,
     GET_COMMENT_SUCCESS,
+    ReactionEnum,
+    REACT_COMMENT_SUCCESS,
     UPDATE_COMMENT_SUCCESS,
 } from '../../constances';
 import { CreateCommentDto, UpdateCommentDto } from '../../dto/request';
 import { handleResponse } from '../../dto/response';
-import { CommnentResDto, CreateCommentResDto } from '../../dto/response/comment.dto';
-import { Comment, CommentDocument } from '../../schemas';
+import { CommnentResDto, CreateCommentResDto, ReactionCommentResDto } from '../../dto/response/comment.dto';
+import { Comment, CommentDocument } from '../../schemas/comment.schema';
 import { ICommentsIdPaginate } from '../../types/post';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { PostService } from '../post/post.service';
+import { UserService } from '../user/user.service';
 
 @Injectable()
 export class CommentService {
@@ -26,6 +30,7 @@ export class CommentService {
         @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
         private readonly cloudinaryService: CloudinaryService,
         private readonly postService: PostService,
+        private readonly userService: UserService,
     ) {}
 
     async getComments(commentsId: string[], after: string, ended: boolean, postId: string) {
@@ -53,15 +58,26 @@ export class CommentService {
             { $project: { user: 0, __v: 0, updatedAt: 0 } },
         ]);
 
-        for (let i = 0; i < comments.length; i++) {
-            comments[i].postId = postId;
-            if (comments[i].image) {
-                comments[i].image = await this.cloudinaryService.getImageUrl(comments[i].image);
+        for (const comment of comments) {
+            comment.postId = postId;
+            if (comment.image) {
+                comment.image = await this.cloudinaryService.getImageUrl(comment.image);
             }
-            if (comments[i].avatar) {
-                comments[i].avatar = await this.cloudinaryService.getImageUrl(comments[i].avatar);
+            if (comment.avatar) {
+                comment.avatar = await this.cloudinaryService.getImageUrl(comment.avatar);
             }
-            comments[i].commentsChildren = await this.commentModel.find({ parentId: comments[i]._id }).count();
+            comment.commentsChildren = await this.commentModel.find({ parentId: comment._id }).count();
+
+            if (comment.reaction.length > 0) {
+                for (const reaction of comment.reaction) {
+                    const user = await this.userService.findById(reaction.userId);
+                    reaction.user = {
+                        _id: user._id,
+                        name: user.name,
+                    };
+                    delete reaction.userId;
+                }
+            }
         }
 
         return handleResponse({
@@ -256,7 +272,7 @@ export class CommentService {
         }
     }
 
-    async delelte(id: string, userId: string) {
+    async delelte(id: string, userId: string, postId: string) {
         try {
             const comment = await this.commentModel.findById(id);
             if (!comment) {
@@ -277,16 +293,89 @@ export class CommentService {
                 this.cloudinaryService.deleteImage(comment.image);
             }
 
+            if (!comment.parentId) {
+                await this.postService.deleteComment(postId, id, userId);
+            }
+
+            const childrenId = await this.deleteChildComment(id);
+
             comment.delete();
             return handleResponse({
                 message: DELETE_COMMENT_SUCCESS,
-                data: id,
+                data: [id, ...childrenId],
             });
         } catch (error) {
             console.log(error);
             return handleResponse({
                 error: error.response?.error || ERROR_DELETE_COMMENT,
                 statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async deleteChildComment(id: string) {
+        const children = await this.commentModel.find({ parentId: id });
+        if (children.length === 0) {
+            return [];
+        }
+        const result = [];
+        for (const item of children) {
+            result.push(item._id);
+            if (item.level !== 3) {
+                const outcome = await this.deleteChildComment(item._id);
+                result.push(...outcome);
+            }
+            if (item.image) {
+                this.cloudinaryService.deleteImage(item.image);
+            }
+            item.delete();
+        }
+
+        return result;
+    }
+
+    async reaction(id: string, type: ReactionEnum, userId: string) {
+        try {
+            const comment = await this.commentModel.findById(id);
+            if (!comment) {
+                return handleResponse({
+                    error: ERROR_NOT_FOUND,
+                    statusCode: HttpStatus.NOT_FOUND,
+                });
+            }
+
+            const user = await this.userService.findById(userId);
+            const index = comment.reaction.findIndex((item) => item.userId.toString() === userId);
+
+            if (index >= 0) {
+                comment.reaction[index].type = type;
+            } else {
+                comment.reaction.push({
+                    type: type,
+                    userId: new mongoose.Types.ObjectId(userId).toString(),
+                });
+            }
+
+            await comment.save();
+
+            const outcome: ReactionCommentResDto = {
+                commentId: id,
+                type: type,
+                user: {
+                    _id: user._id,
+                    name: user.name,
+                },
+            };
+
+            return handleResponse({
+                message: REACT_COMMENT_SUCCESS,
+                data: outcome,
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: ERROR_REACT_COMMENT,
+                statusCode: HttpStatus.BAD_REQUEST,
             });
         }
     }

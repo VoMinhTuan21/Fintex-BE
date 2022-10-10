@@ -1,8 +1,11 @@
+import { ReactionEnum } from '../../constances';
+
 export class CommnentResDto {
     _id: string;
     postId: string;
     avatar: string;
     level: number;
+    userId: string;
     name: {
         firstName: string;
         lastName: string;
@@ -12,8 +15,15 @@ export class CommnentResDto {
     parentId: string | null | undefined;
     commentsChildren: number;
     reaction: {
-        title: string;
-        userId: string;
+        type: ReactionEnum;
+        userId?: string;
+        user: {
+            _id: string;
+            name: {
+                firstName: string;
+                lastName: string;
+            };
+        };
     }[];
     createAt: string;
 }
@@ -21,4 +31,13 @@ export class CommnentResDto {
 export class CreateCommentResDto {
     comment: CommnentResDto;
     after: string;
+}
+
+export class ReactionCommentResDto {
+    commentId: string;
+    type: ReactionEnum;
+    user: {
+        _id: string;
+        name: IName;
+    };
 }
