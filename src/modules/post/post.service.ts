@@ -520,8 +520,8 @@ export class PostService {
 
     async updatePost(postId: string, updatePost: IUpdatePost, imageFiles: Array<Express.Multer.File>) {
         try {
-            console.log('imageFiles: ', imageFiles);
-            console.log('updatePost: ', updatePost);
+            // console.log('imageFiles: ', imageFiles);
+            // console.log('updatePost: ', updatePost);
             const { content, feeling, visibleFor, deletedImages } = updatePost;
             if (!content && !feeling && !imageFiles && !visibleFor) {
                 return handleResponse({
@@ -540,7 +540,7 @@ export class PostService {
             }
 
             if (imageFiles.length === 0) {
-                console.log('khong xoa hinh > lay hinh cu');
+                // console.log('khong xoa hinh > lay hinh cu');
                 for (let index = 0; index < oldPost.images.length; index++) {
                     const image = oldPost.images[index];
                     const url = await this.cloudinaryService.getImageUrl(image.publicId);

@@ -13,21 +13,12 @@ import {
     UseInterceptors,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
-import {
-    CreatePostDto,
-    DeleteCommentDto,
-    DeleteReactionPostDto,
-    FormPostDto,
-    PostPaginationDto,
-    ReactionPostDto,
-    UpdatePostDto,
-} from '../../dto/request/post.dto';
+import { CreatePostDto, PostPaginationDto, ReactionPostDto, UpdatePostDto } from '../../dto/request/post.dto';
 import { JwtGuard } from '../../guards/jwt.guard';
 import { PostService } from './post.service';
 import { Request } from 'express';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { imageFileFilter } from '../../utils';
-import { object } from 'joi';
 
 @ApiTags('Post')
 @Controller('post')
