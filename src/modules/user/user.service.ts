@@ -1,13 +1,23 @@
-import { Injectable } from '@nestjs/common';
+import { Mapper } from '@automapper/core';
+import { InjectMapper } from '@automapper/nestjs';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
+import { GET_STRANGERS_ERROR, GET_STRANGERS_SUCCESS } from '../../constances';
+import { handleResponse, StrangerDto, StrangerPagination } from '../../dto/response';
 import { User, UserDocument } from '../../schemas/user.schema';
 import { PostIdWithUser } from '../../types/classes';
+import { Stranger } from '../../types/classes/user';
 import { hashPasswords } from '../../utils';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 @Injectable()
 export class UserService {
-    constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+    constructor(
+        @InjectModel(User.name) private userModel: Model<UserDocument>,
+        @InjectMapper() private readonly mapper: Mapper,
+        private readonly cloudinaryService: CloudinaryService,
+    ) {}
 
     async create(userSignup: IUserSignUp) {
         const { birthday, email, gender, name, password, phone } = userSignup;
@@ -174,5 +184,55 @@ export class UserService {
         });
 
         return postIdWithUser;
+    }
+
+    async findByName(name: string, limit: number, after: string, userId: string) {
+        try {
+            const source = await this.userModel.find(
+                { 'name.fullName': { $regex: name, $options: 'i' }, _id: { $ne: new mongoose.Types.ObjectId(userId) } },
+                { _id: 1, name: { fullName: 1 }, avatar: 1, address: 1 },
+            );
+
+            const users = this.mapper.mapArray(source, Stranger, StrangerDto);
+
+            const result: StrangerDto[] = [];
+            let newAfter = '';
+
+            if (after) {
+                const index = users.findIndex((item) => item._id.toString() === after);
+                result.push(...users.slice(index, index + limit));
+                newAfter = index + limit >= users.length ? '' : users[index + limit]._id;
+            } else {
+                result.push(...users.slice(0, limit));
+                newAfter = limit >= users.length ? '' : users[limit]._id;
+            }
+
+            const friendsId = (await this.userModel.findById(userId)).friends;
+
+            for (const user of result) {
+                user.avatar = await this.cloudinaryService.getImageUrl(user.avatar);
+                const index = friendsId.findIndex((item: any) => item.equals(user._id));
+
+                if (index >= 0) {
+                    user.isFriend = true;
+                }
+            }
+
+            const outcome: StrangerPagination = {
+                data: result,
+                after: newAfter,
+            };
+
+            return handleResponse({
+                message: GET_STRANGERS_SUCCESS,
+                data: outcome,
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: GET_STRANGERS_ERROR,
+                statusCode: HttpStatus.BAD_REQUEST,
+            });
+        }
     }
 }
