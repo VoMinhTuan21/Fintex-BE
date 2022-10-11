@@ -93,12 +93,16 @@ export class AuthService {
             }
 
             const newUser = await this.userService.create(userSignup);
+
             if (!newUser) {
                 return handleResponse({
                     error: ERROR_CREATE_USER,
                     statusCode: HttpStatus.BAD_REQUEST,
                 });
             }
+            newUser.name.fullName = newUser.name.firstName + ' ' + newUser.name.lastName;
+            newUser.isNew = false;
+            await newUser.save();
 
             newUser.avatar = await this.cloudinaryService.getImageUrl(newUser.avatar);
             newUser.coverPhoto = await this.cloudinaryService.getImageUrl(newUser.coverPhoto);

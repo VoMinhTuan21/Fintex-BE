@@ -13,3 +13,16 @@ export class UserResDto {
     birthday: string;
     gender: Gender;
 }
+
+export class StrangerDto {
+    _id: string;
+    fullName: string;
+    avatar: string;
+    address: string;
+    isFriend: boolean;
+}
+
+export class StrangerPagination {
+    data: StrangerDto[];
+    after: string;
+}
