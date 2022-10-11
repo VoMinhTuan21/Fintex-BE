@@ -57,6 +57,7 @@ export class AuthService {
                 });
             }
             user.avatar = await this.cloudinaryService.getImageUrl(user.avatar);
+            user.coverPhoto = await this.cloudinaryService.getImageUrl(user.coverPhoto);
 
             return handleResponse({
                 message: SIGN_IN_SUCCESSFULLY,
@@ -104,6 +105,7 @@ export class AuthService {
             await newUser.save();
 
             newUser.avatar = await this.cloudinaryService.getImageUrl(newUser.avatar);
+            newUser.coverPhoto = await this.cloudinaryService.getImageUrl(newUser.coverPhoto);
 
             return handleResponse({
                 message: SIGN_UP_SUCCESSFULLY,
@@ -202,6 +204,7 @@ export class AuthService {
             const user = await this.userService.findByPhone(dto.phone);
 
             user.avatar = await this.cloudinaryService.getImageUrl(user.avatar);
+            user.coverPhoto = await this.cloudinaryService.getImageUrl(user.coverPhoto);
 
             if (user) {
                 return handleResponse({
@@ -231,6 +234,7 @@ export class AuthService {
             }
 
             currUser.avatar = await this.cloudinaryService.getImageUrl(currUser.avatar);
+            currUser.coverPhoto = await this.cloudinaryService.getImageUrl(currUser.coverPhoto);
 
             return handleResponse({
                 message: GET_CURRENT_USER_SUCCESSFULLY,

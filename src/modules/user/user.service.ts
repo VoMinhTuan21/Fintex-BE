@@ -29,6 +29,7 @@ export class UserService {
             email,
             gender,
             avatar: process.env.PUBLIC_ID_DEFAULT_AVATAR,
+            coverPhoto: process.env.PUBLIC_ID_DEFAULT_COVER_PHOTO,
             name,
             password: hashPass,
             phone,

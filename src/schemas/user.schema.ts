@@ -69,6 +69,11 @@ export class User {
     })
     avatar: string;
 
+    @Prop({
+        type: String,
+    })
+    coverPhoto: string;
+
     @Prop([{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }])
     friends: UserDocument[] | string[];
 
