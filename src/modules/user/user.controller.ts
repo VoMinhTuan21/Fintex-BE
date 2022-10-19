@@ -70,6 +70,6 @@ export class UserController {
         @UploadedFile() image: Express.Multer.File,
         @Body() body: UpdateAvatarCoverDto,
     ) {
-        return this.userService.uploadAvatar((req.user as IJWTInfo)._id, image, body.typeUpdate);
+        return this.userService.uploadAvatarCover((req.user as IJWTInfo)._id, image, body.typeUpdate);
     }
 }

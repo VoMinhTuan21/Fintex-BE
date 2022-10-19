@@ -156,7 +156,8 @@ export class UpdatePostDto extends FormPostDto {
 }
 
 export class UpdateAvatarCoverPostDto {
-    @ApiPropertyOptional({ type: String })
+    @ApiProperty({ type: String })
+    @IsOptional()
     @IsString()
     @IsNotEmpty()
     content: UpdateImage;

@@ -641,23 +641,67 @@ export class PostService {
     async createAvatarPost(userId: string, content: string, typeUpdate: UpdateImage) {
         try {
             const user = await this.userService.findById(userId);
-            const avatar = await this.cloudinaryService.getImageUrl(user.avatar);
             const cover = await this.cloudinaryService.getImageUrl(user.coverPhoto);
+            const avatar = await this.cloudinaryService.getImageUrl(user.avatar);
+
+            if (typeUpdate === UpdateImage.Avatar) {
+                const post = await this.postModel.create({
+                    content,
+                    images: [
+                        {
+                            publicId: user.avatar,
+                            orientation: Orientation.Horizontal,
+                        },
+                        {
+                            publicId: user.coverPhoto,
+                            orientation: Orientation.Horizontal,
+                        },
+                    ],
+                    visibleFor: VisibleFor.Public,
+                    postType: 'avatar',
+                });
+
+                await this.userService.addPost(userId, post._id);
+
+                const responsePost = {
+                    _id: post._id,
+                    userId: user._id,
+                    avatar,
+                    name: user.name,
+                    content: post.content,
+                    visibleFor: post.visibleFor,
+                    images: [
+                        {
+                            url: avatar,
+                            orientation: Orientation.Horizontal,
+                        },
+                        {
+                            url: cover,
+                            orientation: Orientation.Horizontal,
+                        },
+                    ],
+                    reactions: [],
+                    comments: 0,
+                    createdAt: new Date().toISOString(),
+                    typePost: post.postType,
+                };
+
+                return handleResponse({
+                    message: CREATE_AVATAR_COVER_POST_SUCCESSFULLY,
+                    data: responsePost,
+                });
+            }
 
             const post = await this.postModel.create({
                 content,
                 images: [
-                    {
-                        publicId: user.avatar,
-                        orientation: Orientation.Horizontal,
-                    },
                     {
                         publicId: user.coverPhoto,
                         orientation: Orientation.Horizontal,
                     },
                 ],
                 visibleFor: VisibleFor.Public,
-                postType: 'avatar',
+                postType: 'cover',
             });
 
             await this.userService.addPost(userId, post._id);
@@ -667,13 +711,8 @@ export class PostService {
                 userId: user._id,
                 avatar,
                 name: user.name,
-                content: post.content,
                 visibleFor: post.visibleFor,
                 images: [
-                    {
-                        url: avatar,
-                        orientation: Orientation.Horizontal,
-                    },
                     {
                         url: cover,
                         orientation: Orientation.Horizontal,

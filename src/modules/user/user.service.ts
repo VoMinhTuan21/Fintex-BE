@@ -189,7 +189,7 @@ export class UserService {
         }
     }
 
-    async uploadAvatar(userId: string, imageFile: Express.Multer.File, typeUpdate: UpdateImage) {
+    async uploadAvatarCover(userId: string, imageFile: Express.Multer.File, typeUpdate: UpdateImage) {
         try {
             if (typeUpdate === UpdateImage.Avatar) {
                 const { public_id, url } = await this.cloudinaryService.uploadImage(imageFile, 'avatar');
