@@ -11,6 +11,7 @@ import {
     IsOptional,
     IsString,
 } from 'class-validator';
+import { UpdateImage } from '../../types/enums';
 import { Orientation } from '../../types/enums/orientation';
 import { VisibleFor } from '../../types/enums/visible-for';
 
@@ -152,4 +153,16 @@ export class UpdatePostDto extends FormPostDto {
     })
     @IsBoolean()
     deletedImages: boolean;
+}
+
+export class UpdateAvatarCoverPostDto {
+    @ApiPropertyOptional({ type: String })
+    @IsString()
+    @IsNotEmpty()
+    content: UpdateImage;
+
+    @ApiProperty({ enum: UpdateImage })
+    @IsEnum(UpdateImage)
+    @IsNotEmpty()
+    typeUpdate: UpdateImage;
 }

@@ -8,16 +8,23 @@ import {
     Put,
     Query,
     Req,
+    UploadedFile,
     UploadedFiles,
     UseGuards,
     UseInterceptors,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
-import { CreatePostDto, PostPaginationDto, ReactionPostDto, UpdatePostDto } from '../../dto/request/post.dto';
+import {
+    CreatePostDto,
+    PostPaginationDto,
+    ReactionPostDto,
+    UpdateAvatarCoverPostDto,
+    UpdatePostDto,
+} from '../../dto/request/post.dto';
 import { JwtGuard } from '../../guards/jwt.guard';
 import { PostService } from './post.service';
 import { Request } from 'express';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { imageFileFilter } from '../../utils';
 import { ValidateMongoId } from '../../utils/validate-pipe';
 
@@ -27,8 +34,6 @@ export class PostController {
     constructor(private readonly postService: PostService) {}
 
     @Post()
-    @ApiBearerAuth('access_token')
-    @UseGuards(JwtGuard)
     @ApiBearerAuth('access_token')
     @UseGuards(JwtGuard)
     @ApiConsumes('multipart/form-data')
@@ -146,5 +151,12 @@ export class PostController {
     @UseGuards(JwtGuard)
     async deletePost(@Param('postId', ValidateMongoId) postId: string, @Req() req: Request) {
         return this.postService.deletePost((req.user as IJWTInfo)._id, postId);
+    }
+
+    @Post('/avatar-cover')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    async uploadAvatar(@Req() req: Request, @Body() body: UpdateAvatarCoverPostDto) {
+        return this.postService.createAvatarPost((req.user as IJWTInfo)._id, body.content, body.typeUpdate);
     }
 }

@@ -6,6 +6,7 @@ import { UserDocument } from './user.schema';
 import { Image } from '../types/classes';
 import { CommentDocument } from './comment.schema';
 import { VisibleFor } from '../types/enums/visible-for';
+import { PostType } from '../types/enums';
 
 export type PostDocument = Post & Document;
 
@@ -31,6 +32,12 @@ export class Post {
         enum: VisibleFor,
     })
     visibleFor: VisibleFor;
+
+    @Prop({
+        type: String,
+        enum: PostType,
+    })
+    postType: PostType;
 
     @Prop([{ type: Image }])
     images: Image[];

@@ -1,15 +1,25 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
-import { ERROR_DELETE_POST } from '../../constances';
+import {
+    ERROR_DELETE_POST,
+    ERROR_UPDATE_AVATAR_COVER,
+    UPDATE_AVATAR_SUCCESSFULLY,
+    UPDATE_COVER_SUCCESSFULLY,
+} from '../../constances';
 import { handleResponse } from '../../dto/response';
 import { User, UserDocument } from '../../schemas/user.schema';
 import { PostIdWithUser } from '../../types/classes';
+import { UpdateImage } from '../../types/enums';
 import { hashPasswords } from '../../utils';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 @Injectable()
 export class UserService {
-    constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+    constructor(
+        @InjectModel(User.name) private userModel: Model<UserDocument>,
+        private readonly cloudinaryService: CloudinaryService,
+    ) {}
 
     async create(userSignup: IUserSignUp) {
         const { birthday, email, gender, name, password, phone } = userSignup;
@@ -174,6 +184,44 @@ export class UserService {
             console.log('error: ', error);
             return handleResponse({
                 error: error.response?.error || ERROR_DELETE_POST,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async uploadAvatar(userId: string, imageFile: Express.Multer.File, typeUpdate: UpdateImage) {
+        try {
+            if (typeUpdate === UpdateImage.Avatar) {
+                const { public_id, url } = await this.cloudinaryService.uploadImage(imageFile, 'avatar');
+
+                await this.userModel.findByIdAndUpdate(userId, {
+                    $set: {
+                        avatar: public_id,
+                    },
+                });
+
+                return handleResponse({
+                    message: UPDATE_AVATAR_SUCCESSFULLY,
+                    data: url,
+                });
+            }
+
+            const { public_id, url } = await this.cloudinaryService.uploadImage(imageFile, 'cover');
+
+            await this.userModel.findByIdAndUpdate(userId, {
+                $set: {
+                    coverPhoto: public_id,
+                },
+            });
+
+            return handleResponse({
+                message: UPDATE_COVER_SUCCESSFULLY,
+                data: url,
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: error.response?.error || ERROR_UPDATE_AVATAR_COVER,
                 statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
             });
         }

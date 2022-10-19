@@ -40,6 +40,10 @@ export class PostProfile extends AutomapperProfile {
                     (destination) => destination.reaction,
                     mapFrom((source) => source.reactions),
                 ),
+                forMember(
+                    (destination) => destination.postType,
+                    mapFrom((source) => source.postType),
+                ),
             );
         };
     }
