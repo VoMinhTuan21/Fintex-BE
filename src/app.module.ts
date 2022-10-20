@@ -10,6 +10,7 @@ import { FeelingModule } from './modules/feeling/feeling.module';
 import { PostModule } from './modules/post/post.module';
 import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
 import { CommentModule } from './modules/comment/comment.module';
+import { EducationModule } from './modules/education/education.module';
 
 @Module({
     imports: [
@@ -37,6 +38,7 @@ import { CommentModule } from './modules/comment/comment.module';
         PostModule,
         CommentModule,
         CloudinaryModule,
+        EducationModule,
     ],
     controllers: [],
     providers: [],

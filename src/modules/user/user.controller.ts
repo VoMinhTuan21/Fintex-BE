@@ -1,9 +1,11 @@
-import { Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth } from '@nestjs/swagger';
+import { Body, Controller, Get, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtGuard } from '../../guards/jwt.guard';
 import { UserService } from './user.service';
 import { Request } from 'express';
+import { EditUserDto } from '../../dto/request/user.dto';
 
+@ApiTags('Users')
 @Controller('user')
 export class UserController {
     constructor(private readonly userService: UserService) {}
@@ -27,5 +29,12 @@ export class UserController {
     @UseGuards(JwtGuard)
     async getStrangersRecentPosts(@Req() req: Request) {
         return await this.userService.findStrangerPostIds((req.user as IJWTInfo)._id);
+    }
+
+    @Put('/edit-info')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    async editInfo(@Body() dto: EditUserDto, @Req() req: Request) {
+        return await this.userService.editUser(dto, (req.user as IJWTInfo)._id);
     }
 }

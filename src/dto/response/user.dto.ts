@@ -12,4 +12,6 @@ export class UserResDto {
     coverPhoto: string;
     birthday: string;
     gender: Gender;
+    education: string;
+    address: string;
 }

@@ -48,6 +48,14 @@ export class UserProfile extends AutomapperProfile {
                     (destination) => destination.gender,
                     mapFrom((source) => source.gender),
                 ),
+                forMember(
+                    (destination) => destination.address,
+                    mapFrom((source) => source.address),
+                ),
+                forMember(
+                    (destination) => destination.education,
+                    mapFrom((source) => source.education),
+                ),
             );
         };
     }

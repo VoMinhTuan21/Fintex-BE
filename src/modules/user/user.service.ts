@@ -1,15 +1,26 @@
+import { Mapper } from '@automapper/core';
+import { InjectMapper } from '@automapper/nestjs';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
-import { ERROR_DELETE_POST } from '../../constances';
-import { handleResponse } from '../../dto/response';
+import {
+    EDIT_USER_INFO_SUCCESSFULLY,
+    ERROR_DELETE_POST,
+    ERROR_EDIT_USER_INFO,
+    ERROR_NOT_FOUND,
+} from '../../constances';
+import { EditUserDto } from '../../dto/request/user.dto';
+import { handleResponse, UserResDto } from '../../dto/response';
 import { User, UserDocument } from '../../schemas/user.schema';
 import { PostIdWithUser } from '../../types/classes';
 import { hashPasswords } from '../../utils';
 
 @Injectable()
 export class UserService {
-    constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
+    constructor(
+        @InjectModel(User.name) private userModel: Model<UserDocument>,
+        @InjectMapper() private readonly mapper: Mapper,
+    ) {}
 
     async create(userSignup: IUserSignUp) {
         const { birthday, email, gender, name, password, phone } = userSignup;
@@ -191,5 +202,39 @@ export class UserService {
         });
 
         return postIdWithUser;
+    }
+
+    async editUser(dto: EditUserDto, userId: string) {
+        try {
+            const user = await this.userModel.findById(userId);
+            if (!user) {
+                return handleResponse({
+                    error: ERROR_NOT_FOUND,
+                    statusCode: HttpStatus.NOT_FOUND,
+                });
+            }
+
+            user.email = dto.email;
+            user.name = dto.name;
+            user.address = dto.address;
+            user.birthday = dto.birthday;
+            user.phone = dto.phone;
+            user.education = dto.education;
+            user.gender = dto.gender;
+
+            user.save();
+
+            const outcome = this.mapper.map(user, User, UserResDto);
+
+            return handleResponse({
+                message: EDIT_USER_INFO_SUCCESSFULLY,
+                data: outcome,
+            });
+        } catch (error) {
+            return handleResponse({
+                error: ERROR_EDIT_USER_INFO,
+                statusCode: HttpStatus.BAD_REQUEST,
+            });
+        }
     }
 }
