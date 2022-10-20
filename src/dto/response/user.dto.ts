@@ -15,3 +15,17 @@ export class UserResDto {
     education: string;
     address: string;
 }
+
+export class UserProfileResDto {
+    _id: string;
+    name: {
+        firstName: string;
+        lastName: string;
+    };
+    avatar: string;
+    coverPhoto: string;
+    birthday: string;
+    gender: Gender;
+    education: string;
+    address: string;
+}

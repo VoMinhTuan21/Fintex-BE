@@ -2,6 +2,7 @@ import {
     Body,
     Controller,
     Get,
+    Param,
     Post,
     Put,
     Req,
@@ -80,5 +81,19 @@ export class UserController {
     @UseGuards(JwtGuard)
     async editInfo(@Body() dto: EditUserDto, @Req() req: Request) {
         return await this.userService.editUser(dto, (req.user as IJWTInfo)._id);
+    }
+
+    @Get('/profile/:userId')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    async getUserProfile(@Param('userId') userId: string) {
+        return await this.userService.getUserProfile(userId);
+    }
+
+    @Get('/albums')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    async getAlbums(@Req() req: Request) {
+        return await this.userService.getAlbums((req.user as IJWTInfo)._id);
     }
 }

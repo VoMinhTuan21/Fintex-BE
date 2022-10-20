@@ -16,6 +16,7 @@ import {
     ERROR_GET_COMMENT_POST,
     ERROR_GET_FRIEND_POST_ID,
     ERROR_GET_MY_POST_FOR_PAGINATION,
+    ERROR_GET_PERSON_POSTS_FOR_PAGINATION,
     ERROR_GET_POST_FOR_PAGINATION,
     ERROR_GET_POST_PAGINATION,
     ERROR_GET_STRANGER_POST_IDS,
@@ -24,6 +25,7 @@ import {
     ERROR_REACTION_POST,
     ERROR_UPDATE_POST,
     GET_MY_POST_FOR_PAGINATION_SUCCESSFULLY,
+    GET_PERSON_POST_FOR_PAGINATION_SUCCESSFULLY,
     GET_POST_FOR_PAGINATION_SUCCESSFULLY,
     GET_POST_PAGINATION_SUCCESSFULLY,
     REACTION_POST_SUCCESSFULLY,
@@ -249,13 +251,21 @@ export class PostService {
         }
     }
 
-    async findPostPagination(userId: string, limit: number, after: string, type: 'all' | 'mine' | 'person') {
+    async findPostPagination(
+        userId: string,
+        limit: number,
+        after: string,
+        type: 'all' | 'mine' | 'person',
+        personId?: string,
+    ) {
         try {
             let response: { data: any; message?: string };
             if (type === 'all') {
                 response = await this.getPostsForPagination(userId);
             } else if (type === 'mine') {
                 response = await this.getMyPostForPagination(userId);
+            } else if (type === 'person') {
+                response = await this.getPersonPostForPagination(userId, personId);
             }
 
             const posts = response.data;
@@ -461,7 +471,7 @@ export class PostService {
 
     async getMyPostForPagination(userId: string) {
         try {
-            const myPostIds = await this.userService.findMyPostIds(userId);
+            const myPostIds = await this.userService.findUserPostIds(userId);
             if (!myPostIds) {
                 return handleResponse({
                     error: ERROR_GET_MY_POST_FOR_PAGINATION,
@@ -522,6 +532,92 @@ export class PostService {
             console.log('error: ', error);
             return handleResponse({
                 error: error.response?.error || ERROR_GET_MY_POST_FOR_PAGINATION,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async getPersonPostForPagination(myId: string, userId: string) {
+        try {
+            const allPersonPostIds = await this.userService.findUserPostIds(userId);
+            if (!allPersonPostIds) {
+                return handleResponse({
+                    error: ERROR_GET_PERSON_POSTS_FOR_PAGINATION,
+                    statusCode: HttpStatus.BAD_REQUEST,
+                });
+            }
+
+            const isFriend = await this.userService.isAFriendToB(myId, userId);
+
+            let myPosts: IResPost[] = [];
+            if (isFriend) {
+                myPosts = await this.postModel
+                    .find(
+                        {
+                            _id: { $in: allPersonPostIds.posts },
+                            visibleFor: { $in: ['public', 'friends'] },
+                        },
+                        { updatedAt: 0, __v: 0 },
+                    )
+                    .sort({ createdAt: -1 })
+                    .populate('feeling', 'name emoji')
+                    .populate('reactions.user', 'name');
+            } else {
+                myPosts = await this.postModel
+                    .find(
+                        {
+                            _id: { $in: allPersonPostIds.posts },
+                            visibleFor: { $eq: 'public' },
+                        },
+                        { updatedAt: 0, __v: 0 },
+                    )
+                    .sort({ createdAt: -1 })
+                    .populate('feeling', 'name emoji')
+                    .populate('reactions.user', 'name');
+            }
+
+            const newUnionPostsWithUser = [];
+            for (let i = 0; i < myPosts.length; i++) {
+                const post = myPosts[i];
+
+                const indexPost = allPersonPostIds.posts.findIndex((id) => id.toString() === post._id.toString());
+                if (indexPost !== -1) {
+                    const newImages: IImage[] = [];
+                    for (let index = 0; index < post.images.length; index++) {
+                        const img = post.images[index];
+                        const url = await this.cloudinaryService.getImageUrl(img.publicId);
+                        newImages.push({
+                            url,
+                            orientation: img.orientation,
+                        });
+                    }
+                    //Todo: count reaction of each types
+
+                    newUnionPostsWithUser.push({
+                        userId: allPersonPostIds._id,
+                        name: allPersonPostIds.name,
+                        avatar: await this.cloudinaryService.getImageUrl(allPersonPostIds.avatar),
+                        _id: post._id,
+                        content: post.content,
+                        feeling: post.feeling,
+                        visibleFor: post.visibleFor,
+                        images: newImages,
+                        createdAt: post.createdAt,
+                        comments: post.comments.length,
+                        reactions: post.reactions,
+                        postType: post.postType,
+                    });
+                }
+            }
+
+            return handleResponse({
+                message: GET_PERSON_POST_FOR_PAGINATION_SUCCESSFULLY,
+                data: newUnionPostsWithUser,
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: error.response?.error || ERROR_GET_PERSON_POSTS_FOR_PAGINATION,
                 statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
             });
         }
@@ -638,7 +734,7 @@ export class PostService {
         }
     }
 
-    async createAvatarPost(userId: string, content: string, typeUpdate: UpdateImage) {
+    async createAvatarCoverPost(userId: string, content: string, typeUpdate: UpdateImage) {
         try {
             const user = await this.userService.findById(userId);
             const cover = await this.cloudinaryService.getImageUrl(user.coverPhoto);
