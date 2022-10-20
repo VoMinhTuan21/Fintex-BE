@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsMongoId, IsNotEmpty, IsObject, IsString } from 'class-validator';
-import { Gender } from '../../types/enums';
+import { IsEnum, IsMongoId, IsNotEmpty, IsObject, IsString } from 'class-validator';
+import { Gender, UpdateImage } from '../../types/enums';
 import { Name } from './auth.dto';
 
 export class EditUserDto {
@@ -37,4 +37,11 @@ export class EditUserDto {
     @IsNotEmpty()
     @IsMongoId()
     education: string;
+}
+
+export class UpdateAvatarCoverDto {
+    @ApiProperty({ enum: UpdateImage })
+    @IsEnum(UpdateImage)
+    @IsNotEmpty()
+    typeUpdate: UpdateImage;
 }

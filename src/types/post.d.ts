@@ -57,6 +57,7 @@ declare interface IResPost {
     reactions: IPostReaction[];
     comments: string[];
     createdAt: string;
+    postType: string;
 }
 
 declare interface ICommentsIdPaginate {

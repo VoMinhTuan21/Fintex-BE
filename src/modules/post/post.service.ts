@@ -2,11 +2,13 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
 import {
+    CREATE_AVATAR_COVER_POST_SUCCESSFULLY,
     CREATE_POST_SUCCESSFULLY,
     DELETE_COMMENT_SUCCESS,
     DELETE_POST_SUCCESSFULLY,
     DELETE_REACTION_POST_SUCCESSFULLY,
     ERROR_ADD_COMMENT_TO_POST,
+    ERROR_CREATE_AVATAR_COVER_POST,
     ERROR_CREATE_POST,
     ERROR_DELETE_COMMENT_POST,
     ERROR_DELETE_POST,
@@ -30,6 +32,7 @@ import {
 import { handleResponse } from '../../dto/response';
 import { Post, PostDocument } from '../../schemas/post.schema';
 import { Image, PostIdWithUser } from '../../types/classes';
+import { UpdateImage, VisibleFor } from '../../types/enums';
 import { Orientation } from '../../types/enums/orientation';
 import { ICommentsIdPaginate, ICreatePost, IImage, IResPost, IUpdatePost } from '../../types/post';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
@@ -80,6 +83,7 @@ export class PostService {
                 feeling,
                 images,
                 visibleFor,
+                postType: 'normal',
             });
 
             const user = await this.userService.addPost(userId, post._id);
@@ -98,6 +102,7 @@ export class PostService {
                 reactions: [],
                 comments: 0,
                 createdAt: new Date().toISOString(),
+                typePost: post.postType,
             };
             return handleResponse({
                 message: CREATE_POST_SUCCESSFULLY,
@@ -224,6 +229,7 @@ export class PostService {
                             createdAt: post.createdAt,
                             comments: post.comments.length,
                             reactions: post.reactions,
+                            postType: post.postType,
                         });
                     }
                 }
@@ -503,6 +509,7 @@ export class PostService {
                         createdAt: post.createdAt,
                         comments: post.comments.length,
                         reactions: post.reactions,
+                        postType: post.postType,
                     });
                 }
             }
@@ -626,6 +633,105 @@ export class PostService {
             console.log('error: ', error);
             return handleResponse({
                 error: error.response?.error || ERROR_DELETE_POST,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async createAvatarPost(userId: string, content: string, typeUpdate: UpdateImage) {
+        try {
+            const user = await this.userService.findById(userId);
+            const cover = await this.cloudinaryService.getImageUrl(user.coverPhoto);
+            const avatar = await this.cloudinaryService.getImageUrl(user.avatar);
+
+            if (typeUpdate === UpdateImage.Avatar) {
+                const post = await this.postModel.create({
+                    content,
+                    images: [
+                        {
+                            publicId: user.avatar,
+                            orientation: Orientation.Horizontal,
+                        },
+                        {
+                            publicId: user.coverPhoto,
+                            orientation: Orientation.Horizontal,
+                        },
+                    ],
+                    visibleFor: VisibleFor.Public,
+                    postType: 'avatar',
+                });
+
+                await this.userService.addPost(userId, post._id);
+
+                const responsePost = {
+                    _id: post._id,
+                    userId: user._id,
+                    avatar,
+                    name: user.name,
+                    content: post.content,
+                    visibleFor: post.visibleFor,
+                    images: [
+                        {
+                            url: avatar,
+                            orientation: Orientation.Horizontal,
+                        },
+                        {
+                            url: cover,
+                            orientation: Orientation.Horizontal,
+                        },
+                    ],
+                    reactions: [],
+                    comments: 0,
+                    createdAt: new Date().toISOString(),
+                    typePost: post.postType,
+                };
+
+                return handleResponse({
+                    message: CREATE_AVATAR_COVER_POST_SUCCESSFULLY,
+                    data: responsePost,
+                });
+            }
+
+            const post = await this.postModel.create({
+                content,
+                images: [
+                    {
+                        publicId: user.coverPhoto,
+                        orientation: Orientation.Horizontal,
+                    },
+                ],
+                visibleFor: VisibleFor.Public,
+                postType: 'cover',
+            });
+
+            await this.userService.addPost(userId, post._id);
+
+            const responsePost = {
+                _id: post._id,
+                userId: user._id,
+                avatar,
+                name: user.name,
+                visibleFor: post.visibleFor,
+                images: [
+                    {
+                        url: cover,
+                        orientation: Orientation.Horizontal,
+                    },
+                ],
+                reactions: [],
+                comments: 0,
+                createdAt: new Date().toISOString(),
+                typePost: post.postType,
+            };
+
+            return handleResponse({
+                message: CREATE_AVATAR_COVER_POST_SUCCESSFULLY,
+                data: responsePost,
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: error.response?.error || ERROR_CREATE_AVATAR_COVER_POST,
                 statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
             });
         }
