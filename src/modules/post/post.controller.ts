@@ -142,8 +142,9 @@ export class PostController {
         @Param('id') id: string,
         @Body() updatedPost: UpdatePostDto,
         @UploadedFiles() images: Array<Express.Multer.File>,
+        @Req() req: Request,
     ) {
-        return await this.postService.updatePost(id, updatedPost, images);
+        return await this.postService.updatePost(id, updatedPost, images, (req.user as IJWTInfo)._id);
     }
 
     @Delete('/:postId')
@@ -158,5 +159,10 @@ export class PostController {
     @UseGuards(JwtGuard)
     async uploadAvatar(@Req() req: Request, @Body() body: UpdateAvatarCoverPostDto) {
         return this.postService.createAvatarPost((req.user as IJWTInfo)._id, body.content, body.typeUpdate);
+    }
+
+    @Post('add-images-to-album/:userId')
+    async addImagesToAlbum(@Param('userId') userId: string) {
+        return await this.postService.addImagesToAlbum(userId);
     }
 }

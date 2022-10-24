@@ -60,6 +60,7 @@ export class PostService {
 
             const images: Image[] = [];
             const newImages: IImage[] = [];
+            const imagesAlbum: IAlbum[] = [];
 
             for (let index = 0; index < imageFiles.length; index++) {
                 const file = imageFiles[index];
@@ -76,6 +77,10 @@ export class PostService {
 
                 newImages.push(imageRes);
                 images.push(image);
+                imagesAlbum.push({
+                    publicId: public_id,
+                    visibleFor: visibleFor,
+                });
             }
 
             const post = await this.postModel.create({
@@ -87,6 +92,7 @@ export class PostService {
             });
 
             const user = await this.userService.addPost(userId, post._id);
+            await this.userService.AddImagesToAlbum(userId, imagesAlbum);
             const avatar = await this.cloudinaryService.getImageUrl(user.avatar);
             const feelingDetail = await this.feelingService.findById(feeling);
 
@@ -527,7 +533,7 @@ export class PostService {
         }
     }
 
-    async updatePost(postId: string, updatePost: IUpdatePost, imageFiles: Array<Express.Multer.File>) {
+    async updatePost(postId: string, updatePost: IUpdatePost, imageFiles: Array<Express.Multer.File>, userId: string) {
         try {
             // console.log('imageFiles: ', imageFiles);
             // console.log('updatePost: ', updatePost);
@@ -542,10 +548,15 @@ export class PostService {
 
             const oldPost = await this.postModel.findById(postId).populate('reactions.user', 'name');
             if (deletedImages) {
-                oldPost.images.forEach((item) => {
-                    this.cloudinaryService.deleteImage(item.publicId);
-                });
+                const oldImages: string[] = [];
+
+                for (const image of oldPost.images) {
+                    this.cloudinaryService.deleteImage(image.publicId);
+                    oldImages.push(image.publicId);
+                }
+
                 oldPost.images = [];
+                await this.userService.deleteImagesAlbum(userId, oldImages);
             }
 
             if (imageFiles.length === 0) {
@@ -733,6 +744,36 @@ export class PostService {
             return handleResponse({
                 error: error.response?.error || ERROR_CREATE_AVATAR_COVER_POST,
                 statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async addImagesToAlbum(userId: string) {
+        try {
+            const postIds = await this.userService.getPostIds(userId);
+            const posts = await this.postModel.find({ _id: { $in: postIds } });
+            const images: IAlbum[] = [];
+            for (const post of posts) {
+                if (post.images.length > 0) {
+                    for (const image of post.images) {
+                        images.push({
+                            publicId: image.publicId,
+                            visibleFor: post.visibleFor,
+                        });
+                    }
+                }
+            }
+
+            await this.userService.addAlbum(userId, images);
+
+            return handleResponse({
+                message: 'ADD_IMAGES_TO_ALBUM_SUCCESSFULLY',
+                data: 'success',
+            });
+        } catch (error) {
+            return handleResponse({
+                error: 'Error_add_images_to_album',
+                statusCode: HttpStatus.BAD_REQUEST,
             });
         }
     }

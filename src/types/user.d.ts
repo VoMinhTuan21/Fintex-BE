@@ -11,3 +11,8 @@ declare interface IName {
     firstName: string;
     lastName: string;
 }
+
+declare interface IAlbum {
+    publicId: string;
+    visibleFor: 'public' | 'friends' | 'only me';
+}

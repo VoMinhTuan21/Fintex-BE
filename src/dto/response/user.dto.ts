@@ -15,3 +15,8 @@ export class UserResDto {
     education: string;
     address: string;
 }
+
+export class AlbumResDto {
+    publicId: string;
+    url: string;
+}

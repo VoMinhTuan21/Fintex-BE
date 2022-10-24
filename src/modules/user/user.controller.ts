@@ -1,23 +1,11 @@
-import {
-    Body,
-    Controller,
-    Get,
-    Post,
-    Put,
-    Req,
-    UploadedFile,
-    UploadedFiles,
-    UseGuards,
-    UseInterceptors,
-} from '@nestjs/common';
+import { Body, Controller, Get, Post, Put, Query, Req, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { JwtGuard } from '../../guards/jwt.guard';
 import { UserService } from './user.service';
 import { Request } from 'express';
-import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
-import { CreatePostDto } from '../../dto/request';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { imageFileFilter } from '../../utils';
-import { UpdateAvatarCoverDto } from '../../dto/request/user.dto';
+import { AlbumParamPagination, UpdateAvatarCoverDto } from '../../dto/request/user.dto';
 import { EditUserDto } from '../../dto/request/user.dto';
 
 @ApiTags('User')
@@ -80,5 +68,17 @@ export class UserController {
     @UseGuards(JwtGuard)
     async editInfo(@Body() dto: EditUserDto, @Req() req: Request) {
         return await this.userService.editUser(dto, (req.user as IJWTInfo)._id);
+    }
+
+    @Get('/album?')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    async getMyAlbum(@Req() req: Request, @Query() paginate: AlbumParamPagination) {
+        return await this.userService.getAlbum(
+            (req.user as IJWTInfo)._id,
+            'me',
+            parseInt(paginate.limit),
+            paginate.after,
+        );
     }
 }
