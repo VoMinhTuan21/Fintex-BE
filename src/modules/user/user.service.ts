@@ -315,4 +315,17 @@ export class UserService {
     async getAlbums(userId: string) {
         return await this.userModel.findById(userId).select('friends');
     }
+
+    async getSimpleInfo(userId: string) {
+        const user = await this.userModel.findById(userId).select('name avatar');
+        user.avatar = await this.cloudinaryService.getImageUrl(user.avatar);
+        return user;
+    }
+
+    async getFriendIds(userId: string) {
+        const user = await this.userModel.findById(userId).select('friends');
+        const friendIds: string[] = [];
+        user.friends.forEach((id: any) => friendIds.push(id.toString()));
+        return friendIds;
+    }
 }

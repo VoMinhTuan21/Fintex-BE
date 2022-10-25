@@ -11,6 +11,8 @@ import { PostModule } from './modules/post/post.module';
 import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
 import { CommentModule } from './modules/comment/comment.module';
 import { EducationModule } from './modules/education/education.module';
+import { FriendRequestModule } from './modules/friend-request/friend-request.module';
+import { EventModule } from './modules/event/event.module';
 
 @Module({
     imports: [
@@ -39,6 +41,8 @@ import { EducationModule } from './modules/education/education.module';
         CommentModule,
         CloudinaryModule,
         EducationModule,
+        FriendRequestModule,
+        EventModule,
     ],
     controllers: [],
     providers: [],
