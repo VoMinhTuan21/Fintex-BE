@@ -16,6 +16,10 @@ export class UserResDto {
     address: string;
 }
 
+export class AlbumResDto {
+    publicId: string;
+    url: string;
+}
 export class UserProfileResDto {
     _id: string;
     name: {

@@ -5,20 +5,24 @@ import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
 import {
     EDIT_USER_INFO_SUCCESSFULLY,
+    ERROR_ADD_IMAGES_TO_ALBUM,
+    ERROR_DELETE_IMAGES_IN_ALBUM,
     ERROR_DELETE_POST,
     ERROR_EDIT_USER_INFO,
     ERROR_GET_USER_PROFILE,
+    ERROR_GET_ALBUMS,
     ERROR_NOT_FOUND,
     ERROR_UPDATE_AVATAR_COVER,
     GET_USER_PROFILE_SUCCESSFULLY,
+    GET_ALBUM_SUCCESSFULLY,
     UPDATE_AVATAR_SUCCESSFULLY,
     UPDATE_COVER_SUCCESSFULLY,
 } from '../../constances';
 import { EditUserDto } from '../../dto/request/user.dto';
-import { handleResponse, UserProfileResDto, UserResDto } from '../../dto/response';
+import { AlbumResDto, handleResponse, UserProfileResDto, UserResDto } from '../../dto/response';
 import { User, UserDocument } from '../../schemas/user.schema';
 import { PostIdWithUser } from '../../types/classes';
-import { UpdateImage } from '../../types/enums';
+import { UpdateImage, VisibleFor } from '../../types/enums';
 import { hashPasswords } from '../../utils';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
@@ -314,6 +318,133 @@ export class UserService {
 
     async getAlbums(userId: string) {
         return await this.userModel.findById(userId).select('friends');
+    }
+
+    async addAlbum(userId: string, album: IAlbum[]) {
+        try {
+            const user = await this.userModel.findById(userId);
+            user.albums = album;
+            await user.save();
+        } catch (error) {
+            console.log('error: ', error);
+        }
+    }
+
+    async getPostIds(userId: string) {
+        try {
+            const user = await this.findById(userId);
+            return user.posts;
+        } catch (error) {
+            console.log('error: ', error);
+        }
+    }
+
+    async AddImagesToAlbum(userId: string, album: IAlbum[]) {
+        try {
+            const user = await this.findById(userId);
+            user.albums.push(...album);
+            await user.save();
+        } catch (error) {
+            return handleResponse({
+                error: ERROR_ADD_IMAGES_TO_ALBUM,
+                statusCode: HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async deleteImagesAlbum(userId: string, album: string[]) {
+        try {
+            const user = await this.findById(userId);
+            for (const image of album) {
+                const index = user.albums.findIndex((item) => item.publicId === image);
+                user.albums.splice(index, 1);
+            }
+
+            await user.save();
+        } catch (error) {
+            return handleResponse({
+                error: ERROR_DELETE_IMAGES_IN_ALBUM,
+                statusCode: HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async getAlbum(userId: string, type: 'me' | 'friend' | 'stranger', limit: number, after: string) {
+        try {
+            if (after !== 'end') {
+                const user = await this.userModel.findById(userId);
+                const album: AlbumResDto[] = [];
+                let index = 0;
+                let images: IAlbum[] = [];
+                let imagesFilter: IAlbum[] = [];
+                let newAfter = '';
+                switch (type) {
+                    case 'me':
+                        if (after) {
+                            index = user.albums.findIndex((item) => item.publicId === after);
+                        }
+                        images = user.albums.slice(index, index + limit);
+                        newAfter = index + limit >= user.albums.length ? '' : user.albums[index + limit].publicId;
+
+                        for (const image of images) {
+                            const url = await this.cloudinaryService.getImageUrl(image.publicId);
+                            album.push({
+                                publicId: image.publicId,
+                                url: url,
+                            });
+                        }
+                        break;
+                    case 'friend':
+                        imagesFilter = user.albums.filter((item) => item.visibleFor !== VisibleFor.OnlyMe);
+                        if (after) {
+                            index = imagesFilter.findIndex((item) => item.publicId === after);
+                        }
+                        images = imagesFilter.slice(index, index + limit);
+                        newAfter = index + limit >= imagesFilter.length ? '' : imagesFilter[index + limit].publicId;
+
+                        for (const image of images) {
+                            const url = await this.cloudinaryService.getImageUrl(image.publicId);
+                            album.push({
+                                publicId: image.publicId,
+                                url: url,
+                            });
+                        }
+                        break;
+                    case 'stranger':
+                        imagesFilter = user.albums.filter((item) => item.visibleFor === VisibleFor.Public);
+                        if (after) {
+                            index = imagesFilter.findIndex((item) => item.publicId === after);
+                        }
+                        images = imagesFilter.slice(index, index + limit);
+                        newAfter = index + limit >= imagesFilter.length ? '' : imagesFilter[index + limit].publicId;
+                        for (const image of images) {
+                            if (image.visibleFor === VisibleFor.Public) {
+                                const url = await this.cloudinaryService.getImageUrl(image.publicId);
+                                album.push({
+                                    publicId: image.publicId,
+                                    url: url,
+                                });
+                            }
+                        }
+                        break;
+                    default:
+                        break;
+                }
+
+                return handleResponse({
+                    message: GET_ALBUM_SUCCESSFULLY,
+                    data: {
+                        album: album,
+                        after: newAfter,
+                    },
+                });
+            }
+        } catch (error) {
+            return handleResponse({
+                error: ERROR_GET_ALBUMS,
+                statusCode: HttpStatus.BAD_REQUEST,
+            });
+        }
     }
 
     async getSimpleInfo(userId: string) {

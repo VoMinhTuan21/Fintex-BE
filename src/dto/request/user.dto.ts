@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsMongoId, IsNotEmpty, IsObject, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsEnum, IsMongoId, IsNotEmpty, IsNumberString, IsObject, IsOptional, IsString } from 'class-validator';
 import { Gender, UpdateImage } from '../../types/enums';
 import { Name } from './auth.dto';
 
@@ -44,4 +44,16 @@ export class UpdateAvatarCoverDto {
     @IsEnum(UpdateImage)
     @IsNotEmpty()
     typeUpdate: UpdateImage;
+}
+
+export class AlbumParamPagination {
+    @ApiPropertyOptional({ type: String })
+    @IsNumberString()
+    @IsNotEmpty()
+    limit: string;
+
+    @ApiPropertyOptional({ type: String })
+    @IsNotEmpty()
+    @IsOptional()
+    after: string;
 }

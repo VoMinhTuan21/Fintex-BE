@@ -1,7 +1,8 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { string } from 'joi';
 import { Document } from 'mongodb';
 import mongoose from 'mongoose';
-import { Gender } from '../types/enums';
+import { Gender, VisibleFor } from '../types/enums';
 import { EducationDocument } from './education.schema';
 import { PostDocument } from './post.schema';
 
@@ -86,8 +87,18 @@ export class User {
     })
     bio: string;
 
-    @Prop([{ type: String }])
-    albums: string[];
+    @Prop([
+        {
+            type: {
+                publicId: String,
+                visibleFor: {
+                    type: String,
+                    enum: VisibleFor,
+                },
+            },
+        },
+    ])
+    albums: IAlbum[];
 
     @Prop([{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }])
     follower: UserDocument[] | string[];
