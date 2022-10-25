@@ -9,15 +9,17 @@ import {
     ERROR_DELETE_IMAGES_IN_ALBUM,
     ERROR_DELETE_POST,
     ERROR_EDIT_USER_INFO,
+    ERROR_GET_USER_PROFILE,
     ERROR_GET_ALBUMS,
     ERROR_NOT_FOUND,
     ERROR_UPDATE_AVATAR_COVER,
+    GET_USER_PROFILE_SUCCESSFULLY,
     GET_ALBUM_SUCCESSFULLY,
     UPDATE_AVATAR_SUCCESSFULLY,
     UPDATE_COVER_SUCCESSFULLY,
 } from '../../constances';
 import { EditUserDto } from '../../dto/request/user.dto';
-import { AlbumResDto, handleResponse, UserResDto } from '../../dto/response';
+import { AlbumResDto, handleResponse, UserProfileResDto, UserResDto } from '../../dto/response';
 import { User, UserDocument } from '../../schemas/user.schema';
 import { PostIdWithUser } from '../../types/classes';
 import { UpdateImage, VisibleFor } from '../../types/enums';
@@ -182,7 +184,7 @@ export class UserService {
         }
     }
 
-    async findMyPostIds(userId: string) {
+    async findUserPostIds(userId: string) {
         return await this.userModel.findById(userId).select('avatar name posts');
     }
 
@@ -286,6 +288,38 @@ export class UserService {
         }
     }
 
+    async isAFriendToB(aId: string, bId: string) {
+        const userA = await this.userModel.findById(aId);
+        const index = userA.friends.findIndex((item: any) => item.toString() === bId.toString());
+        if (index !== -1) {
+            return true;
+        }
+        return false;
+    }
+
+    async getUserProfile(userId: string) {
+        try {
+            const user = await this.userModel.findById(userId).populate('education', 'name');
+            user.avatar = await this.cloudinaryService.getImageUrl(user.avatar);
+            user.coverPhoto = await this.cloudinaryService.getImageUrl(user.coverPhoto);
+
+            return handleResponse({
+                message: GET_USER_PROFILE_SUCCESSFULLY,
+                data: this.mapper.map(user, User, UserProfileResDto),
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: error.response?.error || ERROR_GET_USER_PROFILE,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async getAlbums(userId: string) {
+        return await this.userModel.findById(userId).select('friends');
+    }
+
     async addAlbum(userId: string, album: IAlbum[]) {
         try {
             const user = await this.userModel.findById(userId);
@@ -383,7 +417,7 @@ export class UserService {
                         }
                         images = imagesFilter.slice(index, index + limit);
                         newAfter = index + limit >= imagesFilter.length ? '' : imagesFilter[index + limit].publicId;
-                        for (const image of user.albums) {
+                        for (const image of images) {
                             if (image.visibleFor === VisibleFor.Public) {
                                 const url = await this.cloudinaryService.getImageUrl(image.publicId);
                                 album.push({

@@ -1,4 +1,16 @@
-import { Body, Controller, Get, Post, Put, Query, Req, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Get,
+    Param,
+    Post,
+    Put,
+    Query,
+    Req,
+    UploadedFile,
+    UseGuards,
+    UseInterceptors,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import { JwtGuard } from '../../guards/jwt.guard';
 import { UserService } from './user.service';
@@ -7,6 +19,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { imageFileFilter } from '../../utils';
 import { AlbumParamPagination, UpdateAvatarCoverDto } from '../../dto/request/user.dto';
 import { EditUserDto } from '../../dto/request/user.dto';
+import { ValidateMongoId } from '../../utils/validate-pipe';
 
 @ApiTags('User')
 @Controller('user')
@@ -70,6 +83,20 @@ export class UserController {
         return await this.userService.editUser(dto, (req.user as IJWTInfo)._id);
     }
 
+    @Get('/profile/:userId')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    async getUserProfile(@Param('userId') userId: string) {
+        return await this.userService.getUserProfile(userId);
+    }
+
+    @Get('/albums')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    async getAlbums(@Req() req: Request) {
+        return await this.userService.getAlbums((req.user as IJWTInfo)._id);
+    }
+
     @Get('/album?')
     @ApiBearerAuth('access_token')
     @UseGuards(JwtGuard)
@@ -77,6 +104,32 @@ export class UserController {
         return await this.userService.getAlbum(
             (req.user as IJWTInfo)._id,
             'me',
+            parseInt(paginate.limit),
+            paginate.after,
+        );
+    }
+
+    @Get('/album/:id?')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    async getStrangerAlbum(
+        @Req() req: Request,
+        @Query() paginate: AlbumParamPagination,
+        @Param('id', ValidateMongoId) id: string,
+    ) {
+        if (id === (req.user as IJWTInfo)._id) {
+            return await this.userService.getAlbum(
+                (req.user as IJWTInfo)._id,
+                'me',
+                parseInt(paginate.limit),
+                paginate.after,
+            );
+        }
+        const isFriend = await this.userService.isAFriendToB((req.user as IJWTInfo)._id, id);
+
+        return await this.userService.getAlbum(
+            id,
+            isFriend ? 'friend' : 'stranger',
             parseInt(paginate.limit),
             paginate.after,
         );

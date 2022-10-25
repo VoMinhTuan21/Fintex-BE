@@ -100,6 +100,23 @@ export class PostController {
         );
     }
 
+    @Get('/:personId/pagination?')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    async getPersonPaginationPosts(
+        @Req() req: Request,
+        @Query() paginate: PostPaginationDto,
+        @Param('personId') personId: string,
+    ) {
+        return await this.postService.findPostPagination(
+            (req.user as IJWTInfo)._id,
+            parseInt(paginate.limit),
+            paginate.after,
+            'person',
+            personId,
+        );
+    }
+
     // @Delete('/comment')
     // @ApiBearerAuth('access_token')
     // @UseGuards(JwtGuard)
@@ -158,7 +175,7 @@ export class PostController {
     @ApiBearerAuth('access_token')
     @UseGuards(JwtGuard)
     async uploadAvatar(@Req() req: Request, @Body() body: UpdateAvatarCoverPostDto) {
-        return this.postService.createAvatarPost((req.user as IJWTInfo)._id, body.content, body.typeUpdate);
+        return this.postService.createAvatarCoverPost((req.user as IJWTInfo)._id, body.content, body.typeUpdate);
     }
 
     @Post('add-images-to-album/:userId')
