@@ -2,16 +2,21 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
 import {
+    CREATE_AVATAR_COVER_POST_SUCCESSFULLY,
     CREATE_POST_SUCCESSFULLY,
     DELETE_COMMENT_SUCCESS,
+    DELETE_POST_SUCCESSFULLY,
     DELETE_REACTION_POST_SUCCESSFULLY,
     ERROR_ADD_COMMENT_TO_POST,
+    ERROR_CREATE_AVATAR_COVER_POST,
     ERROR_CREATE_POST,
     ERROR_DELETE_COMMENT_POST,
+    ERROR_DELETE_POST,
     ERROR_DELETE_REACTION_POST,
     ERROR_GET_COMMENT_POST,
     ERROR_GET_FRIEND_POST_ID,
     ERROR_GET_MY_POST_FOR_PAGINATION,
+    ERROR_GET_PERSON_POSTS_FOR_PAGINATION,
     ERROR_GET_POST_FOR_PAGINATION,
     ERROR_GET_POST_PAGINATION,
     ERROR_GET_STRANGER_POST_IDS,
@@ -20,6 +25,7 @@ import {
     ERROR_REACTION_POST,
     ERROR_UPDATE_POST,
     GET_MY_POST_FOR_PAGINATION_SUCCESSFULLY,
+    GET_PERSON_POST_FOR_PAGINATION_SUCCESSFULLY,
     GET_POST_FOR_PAGINATION_SUCCESSFULLY,
     GET_POST_PAGINATION_SUCCESSFULLY,
     REACTION_POST_SUCCESSFULLY,
@@ -28,6 +34,7 @@ import {
 import { handleResponse } from '../../dto/response';
 import { Post, PostDocument } from '../../schemas/post.schema';
 import { Image, PostIdWithUser } from '../../types/classes';
+import { UpdateImage, VisibleFor } from '../../types/enums';
 import { Orientation } from '../../types/enums/orientation';
 import { ICommentsIdPaginate, ICreatePost, IImage, IResPost, IUpdatePost } from '../../types/post';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
@@ -55,6 +62,7 @@ export class PostService {
 
             const images: Image[] = [];
             const newImages: IImage[] = [];
+            const imagesAlbum: IAlbum[] = [];
 
             for (let index = 0; index < imageFiles.length; index++) {
                 const file = imageFiles[index];
@@ -71,6 +79,10 @@ export class PostService {
 
                 newImages.push(imageRes);
                 images.push(image);
+                imagesAlbum.push({
+                    publicId: public_id,
+                    visibleFor: visibleFor,
+                });
             }
 
             const post = await this.postModel.create({
@@ -78,9 +90,11 @@ export class PostService {
                 feeling,
                 images,
                 visibleFor,
+                postType: 'normal',
             });
 
             const user = await this.userService.addPost(userId, post._id);
+            await this.userService.AddImagesToAlbum(userId, imagesAlbum);
             const avatar = await this.cloudinaryService.getImageUrl(user.avatar);
             const feelingDetail = await this.feelingService.findById(feeling);
 
@@ -96,6 +110,7 @@ export class PostService {
                 reactions: [],
                 comments: 0,
                 createdAt: new Date().toISOString(),
+                typePost: post.postType,
             };
             return handleResponse({
                 message: CREATE_POST_SUCCESSFULLY,
@@ -222,6 +237,7 @@ export class PostService {
                             createdAt: post.createdAt,
                             comments: post.comments.length,
                             reactions: post.reactions,
+                            postType: post.postType,
                         });
                     }
                 }
@@ -241,13 +257,21 @@ export class PostService {
         }
     }
 
-    async findPostPagination(userId: string, limit: number, after: string, type: 'all' | 'mine' | 'person') {
+    async findPostPagination(
+        userId: string,
+        limit: number,
+        after: string,
+        type: 'all' | 'mine' | 'person',
+        personId?: string,
+    ) {
         try {
             let response: { data: any; message?: string };
             if (type === 'all') {
                 response = await this.getPostsForPagination(userId);
             } else if (type === 'mine') {
                 response = await this.getMyPostForPagination(userId);
+            } else if (type === 'person') {
+                response = await this.getPersonPostForPagination(userId, personId);
             }
 
             const posts = response.data;
@@ -453,7 +477,7 @@ export class PostService {
 
     async getMyPostForPagination(userId: string) {
         try {
-            const myPostIds = await this.userService.findMyPostIds(userId);
+            const myPostIds = await this.userService.findUserPostIds(userId);
             if (!myPostIds) {
                 return handleResponse({
                     error: ERROR_GET_MY_POST_FOR_PAGINATION,
@@ -501,6 +525,7 @@ export class PostService {
                         createdAt: post.createdAt,
                         comments: post.comments.length,
                         reactions: post.reactions,
+                        postType: post.postType,
                     });
                 }
             }
@@ -518,7 +543,93 @@ export class PostService {
         }
     }
 
-    async updatePost(postId: string, updatePost: IUpdatePost, imageFiles: Array<Express.Multer.File>) {
+    async getPersonPostForPagination(myId: string, userId: string) {
+        try {
+            const allPersonPostIds = await this.userService.findUserPostIds(userId);
+            if (!allPersonPostIds) {
+                return handleResponse({
+                    error: ERROR_GET_PERSON_POSTS_FOR_PAGINATION,
+                    statusCode: HttpStatus.BAD_REQUEST,
+                });
+            }
+
+            const isFriend = await this.userService.isAFriendToB(myId, userId);
+
+            let myPosts: IResPost[] = [];
+            if (isFriend) {
+                myPosts = await this.postModel
+                    .find(
+                        {
+                            _id: { $in: allPersonPostIds.posts },
+                            visibleFor: { $in: ['public', 'friends'] },
+                        },
+                        { updatedAt: 0, __v: 0 },
+                    )
+                    .sort({ createdAt: -1 })
+                    .populate('feeling', 'name emoji')
+                    .populate('reactions.user', 'name');
+            } else {
+                myPosts = await this.postModel
+                    .find(
+                        {
+                            _id: { $in: allPersonPostIds.posts },
+                            visibleFor: { $eq: 'public' },
+                        },
+                        { updatedAt: 0, __v: 0 },
+                    )
+                    .sort({ createdAt: -1 })
+                    .populate('feeling', 'name emoji')
+                    .populate('reactions.user', 'name');
+            }
+
+            const newUnionPostsWithUser = [];
+            for (let i = 0; i < myPosts.length; i++) {
+                const post = myPosts[i];
+
+                const indexPost = allPersonPostIds.posts.findIndex((id) => id.toString() === post._id.toString());
+                if (indexPost !== -1) {
+                    const newImages: IImage[] = [];
+                    for (let index = 0; index < post.images.length; index++) {
+                        const img = post.images[index];
+                        const url = await this.cloudinaryService.getImageUrl(img.publicId);
+                        newImages.push({
+                            url,
+                            orientation: img.orientation,
+                        });
+                    }
+                    //Todo: count reaction of each types
+
+                    newUnionPostsWithUser.push({
+                        userId: allPersonPostIds._id,
+                        name: allPersonPostIds.name,
+                        avatar: await this.cloudinaryService.getImageUrl(allPersonPostIds.avatar),
+                        _id: post._id,
+                        content: post.content,
+                        feeling: post.feeling,
+                        visibleFor: post.visibleFor,
+                        images: newImages,
+                        createdAt: post.createdAt,
+                        comments: post.comments.length,
+                        reactions: post.reactions,
+                        postType: post.postType,
+                    });
+                }
+            }
+
+            return handleResponse({
+                message: GET_PERSON_POST_FOR_PAGINATION_SUCCESSFULLY,
+                data: newUnionPostsWithUser,
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: error.response?.error || ERROR_GET_PERSON_POSTS_FOR_PAGINATION,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async updatePost(postId: string, updatePost: IUpdatePost, imageFiles: Array<Express.Multer.File>, userId: string) {
         try {
             // console.log('imageFiles: ', imageFiles);
             // console.log('updatePost: ', updatePost);
@@ -533,10 +644,15 @@ export class PostService {
 
             const oldPost = await this.postModel.findById(postId).populate('reactions.user', 'name');
             if (deletedImages) {
-                oldPost.images.forEach((item) => {
-                    this.cloudinaryService.deleteImage(item.publicId);
-                });
+                const oldImages: string[] = [];
+
+                for (const image of oldPost.images) {
+                    this.cloudinaryService.deleteImage(image.publicId);
+                    oldImages.push(image.publicId);
+                }
+
                 oldPost.images = [];
+                await this.userService.deleteImagesAlbum(userId, oldImages);
             }
 
             if (imageFiles.length === 0) {
@@ -598,6 +714,162 @@ export class PostService {
             return handleResponse({
                 error: error.response?.error || ERROR_UPDATE_POST,
                 statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async getParentCommentIds(postId: string) {
+        const post = await this.postModel.findById(postId).select('comments');
+        return post.comments;
+    }
+
+    async deletePost(useId: string, postId: string) {
+        try {
+            await this.userService.deletePost(useId, postId);
+            const post = await this.postModel.findOneAndDelete({ _id: postId });
+
+            post.images.forEach((item) => {
+                this.cloudinaryService.deleteImage(item.publicId);
+            });
+
+            return handleResponse({
+                message: DELETE_POST_SUCCESSFULLY,
+                data: postId,
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: error.response?.error || ERROR_DELETE_POST,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async createAvatarCoverPost(userId: string, content: string, typeUpdate: UpdateImage) {
+        try {
+            const user = await this.userService.findById(userId);
+            const cover = await this.cloudinaryService.getImageUrl(user.coverPhoto);
+            const avatar = await this.cloudinaryService.getImageUrl(user.avatar);
+
+            if (typeUpdate === UpdateImage.Avatar) {
+                const post = await this.postModel.create({
+                    content,
+                    images: [
+                        {
+                            publicId: user.avatar,
+                            orientation: Orientation.Horizontal,
+                        },
+                        {
+                            publicId: user.coverPhoto,
+                            orientation: Orientation.Horizontal,
+                        },
+                    ],
+                    visibleFor: VisibleFor.Public,
+                    postType: 'avatar',
+                });
+
+                await this.userService.addPost(userId, post._id);
+
+                const responsePost = {
+                    _id: post._id,
+                    userId: user._id,
+                    avatar,
+                    name: user.name,
+                    content: post.content,
+                    visibleFor: post.visibleFor,
+                    images: [
+                        {
+                            url: avatar,
+                            orientation: Orientation.Horizontal,
+                        },
+                        {
+                            url: cover,
+                            orientation: Orientation.Horizontal,
+                        },
+                    ],
+                    reactions: [],
+                    comments: 0,
+                    createdAt: new Date().toISOString(),
+                    typePost: post.postType,
+                };
+
+                return handleResponse({
+                    message: CREATE_AVATAR_COVER_POST_SUCCESSFULLY,
+                    data: responsePost,
+                });
+            }
+
+            const post = await this.postModel.create({
+                content,
+                images: [
+                    {
+                        publicId: user.coverPhoto,
+                        orientation: Orientation.Horizontal,
+                    },
+                ],
+                visibleFor: VisibleFor.Public,
+                postType: 'cover',
+            });
+
+            await this.userService.addPost(userId, post._id);
+
+            const responsePost = {
+                _id: post._id,
+                userId: user._id,
+                avatar,
+                name: user.name,
+                visibleFor: post.visibleFor,
+                images: [
+                    {
+                        url: cover,
+                        orientation: Orientation.Horizontal,
+                    },
+                ],
+                reactions: [],
+                comments: 0,
+                createdAt: new Date().toISOString(),
+                typePost: post.postType,
+            };
+
+            return handleResponse({
+                message: CREATE_AVATAR_COVER_POST_SUCCESSFULLY,
+                data: responsePost,
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: error.response?.error || ERROR_CREATE_AVATAR_COVER_POST,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async addImagesToAlbum(userId: string) {
+        try {
+            const postIds = await this.userService.getPostIds(userId);
+            const posts = await this.postModel.find({ _id: { $in: postIds } });
+            const images: IAlbum[] = [];
+            for (const post of posts) {
+                if (post.images.length > 0) {
+                    for (const image of post.images) {
+                        images.push({
+                            publicId: image.publicId,
+                            visibleFor: post.visibleFor,
+                        });
+                    }
+                }
+            }
+
+            await this.userService.addAlbum(userId, images);
+
+            return handleResponse({
+                message: 'ADD_IMAGES_TO_ALBUM_SUCCESSFULLY',
+                data: 'success',
+            });
+        } catch (error) {
+            return handleResponse({
+                error: 'Error_add_images_to_album',
+                statusCode: HttpStatus.BAD_REQUEST,
             });
         }
     }

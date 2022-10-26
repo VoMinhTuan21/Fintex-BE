@@ -1,5 +1,5 @@
 import { FeelingDocument } from '../../schemas/feeling.schema';
-import { VisibleFor } from '../../types/enums';
+import { PostType, VisibleFor } from '../../types/enums';
 import { Image } from '../../types/classes';
 import { ReactionDocument } from '../../schemas/reaction.schema';
 import { UserDocument } from '../../schemas/user.schema';
@@ -14,5 +14,6 @@ export class PostResDto {
         type: string;
         user: UserDocument;
     }[];
+    postType: PostType;
     createdAt: string;
 }

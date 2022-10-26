@@ -3,9 +3,12 @@ import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
 import {
     CREATE_COMMENT_SUCCESS,
+    DELETE_ALL_COMMENT_OF_POST_SUCCESSFULLY,
     DELETE_COMMENT_SUCCESS,
     ERROR_CREATE_COMMENT,
+    ERROR_DELETE_ALL_COMMENT_OF_POST,
     ERROR_DELETE_COMMENT,
+    ERROR_GET_ALL_PARENT_COMMENT_IDS_OF_POST,
     ERROR_NOT_FOUND,
     ERROR_NOT_HAVE_PERMISSION,
     ERROR_NOW_ALLOW_TO_REPLY_COMMENT_LEVEL_3,
@@ -272,7 +275,7 @@ export class CommentService {
         }
     }
 
-    async delelte(id: string, userId: string, postId: string) {
+    async delete(id: string, userId: string, postId: string) {
         try {
             const comment = await this.commentModel.findById(id);
             if (!comment) {
@@ -318,7 +321,7 @@ export class CommentService {
         if (children.length === 0) {
             return [];
         }
-        const result = [];
+        const result: string[] = [];
         for (const item of children) {
             result.push(item._id);
             if (item.level !== 3) {
@@ -376,6 +379,39 @@ export class CommentService {
             return handleResponse({
                 error: ERROR_REACT_COMMENT,
                 statusCode: HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async deleteAllCommentOfPost(postId: string) {
+        try {
+            const commentIds = await this.postService.getParentCommentIds(postId);
+            if (!commentIds) {
+                return handleResponse({
+                    error: ERROR_GET_ALL_PARENT_COMMENT_IDS_OF_POST,
+                    statusCode: HttpStatus.BAD_REQUEST,
+                });
+            }
+
+            const deletedCommentIds: string[] = [];
+            for (const commentId of commentIds) {
+                const res = await this.deleteChildComment(commentId.toString());
+                const parentComment = await this.commentModel.findOneAndDelete({ _id: commentId });
+                if (parentComment.image) {
+                    this.cloudinaryService.deleteImage(parentComment.image);
+                }
+                deletedCommentIds.push(...res, parentComment._id);
+            }
+
+            return handleResponse({
+                message: DELETE_ALL_COMMENT_OF_POST_SUCCESSFULLY,
+                data: deletedCommentIds,
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: error.response?.error || ERROR_DELETE_ALL_COMMENT_OF_POST,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
             });
         }
     }
