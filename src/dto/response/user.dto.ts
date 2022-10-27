@@ -39,7 +39,7 @@ export class StrangerDto {
     fullName: string;
     avatar: string;
     address: string;
-    isFriend: boolean;
+    relationship: string;
 }
 
 export class StrangerPagination {

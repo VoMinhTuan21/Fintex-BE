@@ -5,6 +5,7 @@ import { JwtGuard } from '../../guards/jwt.guard';
 import { FriendRequestService } from './friend-request.service';
 import { Request } from 'express';
 import { ValidateMongoId } from '../../utils/validate-pipe';
+import { GetStrangerDto } from '../../dto/request/user.dto';
 
 @ApiTags('Friend request')
 @Controller('friend-request')
@@ -55,5 +56,17 @@ export class FriendRequestController {
     @UseGuards(JwtGuard)
     async deleteFriendReq(@Param('id', ValidateMongoId) id: string) {
         return await this.friendReqService.deleteFriendReq(id);
+    }
+
+    @Get('/strangers/:name?')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    async getStragers(@Param('name') name: string, @Query() query: GetStrangerDto, @Req() req: Request) {
+        return await this.friendReqService.findUserByName(
+            (req.user as IJWTInfo)._id,
+            name,
+            parseInt(query.limit),
+            query.after,
+        );
     }
 }

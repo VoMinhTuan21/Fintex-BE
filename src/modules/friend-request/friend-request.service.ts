@@ -9,9 +9,11 @@ import {
     ERROR_CHECK_RELATIONSHIP,
     ERROR_CREATE_FRIEND_REQ,
     ERROR_DELETE_FRIEND_REQ,
+    ERROR_FIND_USER_BY_NAME,
     ERROR_FRIEND_REQ_EXISTED,
     ERROR_GET_RECEIVE_FRIEND_REQ_FOR_PAGINATION,
     ERROR_GET_RECEIVE_FRIEND_REQ_PAGINATION,
+    FIND_USER_BY_NAME_SUCCESS,
     GET_FRIEND_REQ_FOR_PAGINATION_SUCCESS,
     GET_FRIEND_REQ_PAGINATION_SUCCESS,
 } from '../../constances/friendReqResponseMessage';
@@ -262,6 +264,32 @@ export class FriendRequestService {
             console.log('error: ', error);
             return handleResponse({
                 error: error.response?.error || ERROR_DELETE_FRIEND_REQ,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async findUserByName(userId: string, name: string, limit: number, after: string) {
+        try {
+            const response = await this.userService.findByName(name, limit, after, userId);
+            const users = response.data.data;
+            const newAfter = response.data.after;
+
+            for (const user of users) {
+                user.relationship = (await this.checkRelationship(userId, user._id)).data;
+            }
+
+            return handleResponse({
+                message: FIND_USER_BY_NAME_SUCCESS,
+                data: {
+                    data: users,
+                    after: newAfter,
+                },
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: error.response?.error || ERROR_FIND_USER_BY_NAME,
                 statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
             });
         }

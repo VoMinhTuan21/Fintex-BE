@@ -116,27 +116,6 @@ export class UserProfile extends AutomapperProfile {
                     mapFrom((source) => source.address),
                 ),
             );
-            createMap(
-                mapper,
-                Stranger,
-                StrangerDto,
-                forMember(
-                    (destination) => destination._id,
-                    mapFrom((source) => source._id),
-                ),
-                forMember(
-                    (destination) => destination.fullName,
-                    mapFrom((source) => source.name.fullName),
-                ),
-                forMember(
-                    (destination) => destination.avatar,
-                    mapFrom((source) => source.avatar),
-                ),
-                forMember(
-                    (destination) => destination.address,
-                    mapFrom((source) => source.address),
-                ),
-            );
         };
     }
 }

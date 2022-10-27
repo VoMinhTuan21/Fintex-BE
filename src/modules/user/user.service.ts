@@ -497,15 +497,8 @@ export class UserService {
                 newAfter = limit >= users.length ? '' : users[limit]._id;
             }
 
-            const friendsId = (await this.userModel.findById(userId)).friends;
-
             for (const user of result) {
                 user.avatar = await this.cloudinaryService.getImageUrl(user.avatar);
-                const index = friendsId.findIndex((item: any) => item.equals(user._id));
-
-                if (index >= 0) {
-                    user.isFriend = true;
-                }
             }
 
             const outcome: StrangerPagination = {
