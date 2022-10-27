@@ -17,6 +17,8 @@ import {
     UPDATE_AVATAR_SUCCESSFULLY,
     UPDATE_COVER_SUCCESSFULLY,
     ERROR_DELETE_POST,
+    ERROR_ADD_FRIEND,
+    SUCCESS_ADD_FRIEND,
 } from '../../constances';
 import { EditUserDto } from '../../dto/request/user.dto';
 import { GET_STRANGERS_ERROR, GET_STRANGERS_SUCCESS } from '../../constances';
@@ -520,6 +522,24 @@ export class UserService {
             return handleResponse({
                 error: GET_STRANGERS_ERROR,
                 statusCode: HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async addFriend(userId: string, friendId: string) {
+        try {
+            await this.userModel.findByIdAndUpdate(userId, {
+                $push: { friends: friendId },
+            });
+            return handleResponse({
+                message: SUCCESS_ADD_FRIEND,
+                data: null,
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: error.response?.error || ERROR_ADD_FRIEND,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
             });
         }
     }

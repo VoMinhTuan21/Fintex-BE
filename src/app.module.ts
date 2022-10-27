@@ -13,6 +13,7 @@ import { CommentModule } from './modules/comment/comment.module';
 import { EducationModule } from './modules/education/education.module';
 import { FriendRequestModule } from './modules/friend-request/friend-request.module';
 import { EventModule } from './modules/event/event.module';
+import { NotificationModule } from './modules/notification/notification.module';
 
 @Module({
     imports: [
@@ -43,6 +44,7 @@ import { EventModule } from './modules/event/event.module';
         EducationModule,
         FriendRequestModule,
         EventModule,
+        NotificationModule,
     ],
     controllers: [],
     providers: [],

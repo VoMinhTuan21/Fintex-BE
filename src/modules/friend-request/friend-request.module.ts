@@ -4,6 +4,7 @@ import { FriendRequest, FriendRequestSchema } from '../../schemas/friend-request
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 import { EventsGateway } from '../event/event.gateway';
 import { EventModule } from '../event/event.module';
+import { NotificationModule } from '../notification/notification.module';
 import { UserModule } from '../user/user.module';
 import { FriendRequestController } from './friend-request.controller';
 import { FriendRequestService } from './friend-request.service';
@@ -14,6 +15,7 @@ import { FriendRequestService } from './friend-request.service';
         UserModule,
         EventModule,
         CloudinaryModule,
+        NotificationModule,
     ],
     controllers: [FriendRequestController],
     providers: [FriendRequestService],
