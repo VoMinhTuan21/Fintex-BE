@@ -107,7 +107,13 @@ export class CommentController {
     @UseGuards(JwtGuard)
     @Post('/reaction')
     reaction(@Body() dto: ReactionCommentDto, @Req() req: Request) {
-        return this.commentService.reaction(dto.commentId, dto.type, (req.user as IJWTInfo)._id);
+        return this.commentService.reaction(
+            dto.commentId,
+            dto.type,
+            (req.user as IJWTInfo)._id,
+            dto.postId,
+            dto.postPersonId,
+        );
     }
 
     @Delete('/all-comments-of-post/:id')
