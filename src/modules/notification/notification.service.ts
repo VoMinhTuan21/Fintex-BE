@@ -59,6 +59,7 @@ export class NotificationService {
                     to: body.toId,
                     content: `${fromUser.name.fullName} ${subContent}`,
                     postId: body.postId,
+                    postPersonId: body.postPersonId,
                     type: body.type,
                 });
 
@@ -69,6 +70,7 @@ export class NotificationService {
                         type: noti.type,
                         content: noti.content,
                         postId: noti.postId,
+                        postPersonId: noti.postPersonId,
                         from: fromUser,
                         to: noti.to,
                         isSeen: noti.isSeen,
@@ -88,7 +90,10 @@ export class NotificationService {
     async getNotifyForPagination(userId: string) {
         try {
             const response: any[] = await this.notiModel
-                .find({ to: userId }, { _id: 1, type: 1, content: 1, from: 1, isSeen: 1, createdAt: 1 })
+                .find(
+                    { to: userId },
+                    { _id: 1, type: 1, content: 1, from: 1, postId: 1, postPersonId: 1, isSeen: 1, createdAt: 1 },
+                )
                 .sort({ createdAt: -1 })
                 .populate('from', 'name avatar');
 

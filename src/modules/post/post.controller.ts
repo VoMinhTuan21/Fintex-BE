@@ -17,6 +17,7 @@ import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
 import {
     CreatePostDto,
     PostPaginationDto,
+    QueryDetailPostDto,
     ReactionPostDto,
     UpdateAvatarCoverPostDto,
     UpdatePostDto,
@@ -128,7 +129,7 @@ export class PostController {
     @ApiBearerAuth('access_token')
     @UseGuards(JwtGuard)
     async reactionPost(@Body() dto: ReactionPostDto, @Req() req: Request) {
-        return this.postService.reactionPost((req.user as IJWTInfo)._id, dto.postId, dto.type);
+        return this.postService.reactionPost((req.user as IJWTInfo)._id, dto.postId, dto.type, dto.postPersonId);
     }
 
     @Delete('/reaction/:postId')
@@ -181,5 +182,12 @@ export class PostController {
     @Post('add-images-to-album/:userId')
     async addImagesToAlbum(@Param('userId') userId: string) {
         return await this.postService.addImagesToAlbum(userId);
+    }
+
+    @Get('detail-post?')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    async getDetailPost(@Query() query: QueryDetailPostDto) {
+        return await this.postService.getDetailPost(query.postId, query.postPersonId);
     }
 }

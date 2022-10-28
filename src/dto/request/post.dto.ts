@@ -108,6 +108,11 @@ export class ReactionPostDto {
     @IsString()
     @IsNotEmpty()
     type: string;
+
+    @ApiProperty({ type: String })
+    @IsMongoId()
+    @IsNotEmpty()
+    postPersonId: string;
 }
 
 export class DeleteReactionPostDto {
@@ -166,4 +171,16 @@ export class UpdateAvatarCoverPostDto {
     @IsEnum(UpdateImage)
     @IsNotEmpty()
     typeUpdate: UpdateImage;
+}
+
+export class QueryDetailPostDto {
+    @ApiProperty({ type: String })
+    @IsMongoId()
+    @IsNotEmpty()
+    postId: string;
+
+    @ApiProperty({ type: String })
+    @IsMongoId()
+    @IsNotEmpty()
+    postPersonId: string;
 }

@@ -35,6 +35,12 @@ export class Notification {
     })
     postId: PostDocument | string;
 
+    @Prop({
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+    })
+    postPersonId: UserDocument | string;
+
     @Prop({ type: Boolean, default: false })
     isSeen: boolean;
 }

@@ -14,6 +14,7 @@ import {
     ERROR_DELETE_POST,
     ERROR_DELETE_REACTION_POST,
     ERROR_GET_COMMENT_POST,
+    ERROR_GET_DETAIL_POST,
     ERROR_GET_FRIEND_POST_ID,
     ERROR_GET_MY_POST_FOR_PAGINATION,
     ERROR_GET_PERSON_POSTS_FOR_PAGINATION,
@@ -24,6 +25,7 @@ import {
     ERROR_POST_HAS_NO_DATA,
     ERROR_REACTION_POST,
     ERROR_UPDATE_POST,
+    GET_DETAIL_POST_SUCCESS,
     GET_MY_POST_FOR_PAGINATION_SUCCESSFULLY,
     GET_PERSON_POST_FOR_PAGINATION_SUCCESSFULLY,
     GET_POST_FOR_PAGINATION_SUCCESSFULLY,
@@ -38,7 +40,9 @@ import { UpdateImage, VisibleFor } from '../../types/enums';
 import { Orientation } from '../../types/enums/orientation';
 import { ICommentsIdPaginate, ICreatePost, IImage, IResPost, IUpdatePost } from '../../types/post';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { EventsGateway } from '../event/event.gateway';
 import { FeelingService } from '../feeling/feeling.service';
+import { NotificationService } from '../notification/notification.service';
 import { UserService } from '../user/user.service';
 
 @Injectable()
@@ -48,6 +52,8 @@ export class PostService {
         private readonly userService: UserService,
         private readonly feelingService: FeelingService,
         private readonly cloudinaryService: CloudinaryService,
+        private readonly eventGateway: EventsGateway,
+        private readonly notiService: NotificationService,
     ) {}
 
     async create(userId: string, newPost: ICreatePost, imageFiles: Array<Express.Multer.File>) {
@@ -412,7 +418,7 @@ export class PostService {
         return comments[index + 1].toString();
     }
 
-    async reactionPost(userId: string, postId: string, type: string) {
+    async reactionPost(userId: string, postId: string, type: string, postPersonId: string) {
         try {
             const post = await this.postModel.findById(postId);
             const oldReaction = post.reactions.find((item) => item.user.toString() === userId.toString());
@@ -428,6 +434,18 @@ export class PostService {
 
             await post.save();
             const user = await this.userService.findById(userId);
+
+            if (userId !== postPersonId) {
+                const notify = await this.notiService.create({
+                    type: 'reactionPost',
+                    fromId: userId,
+                    toId: postPersonId,
+                    postId,
+                    postPersonId,
+                });
+
+                this.eventGateway.sendNotify({ notify: notify.data }, postPersonId);
+            }
 
             return handleResponse({
                 message: REACTION_POST_SUCCESSFULLY,
@@ -870,6 +888,52 @@ export class PostService {
             return handleResponse({
                 error: 'Error_add_images_to_album',
                 statusCode: HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async getDetailPost(postId: string, postPersonId: string) {
+        try {
+            const postPerson = await this.userService.getSimpleInfo(postPersonId);
+            const post: any = await this.postModel
+                .findById(postId, { updatedAt: 0, __v: 0 })
+                .populate('feeling', 'name emoji')
+                .populate('reactions.user', 'name');
+
+            const newImages: IImage[] = [];
+            for (let index = 0; index < post.images.length; index++) {
+                const img = post.images[index];
+                const url = await this.cloudinaryService.getImageUrl(img.publicId);
+                newImages.push({
+                    url,
+                    orientation: img.orientation,
+                });
+            }
+
+            const returnPost = {
+                userId: postPerson._id,
+                name: postPerson.name,
+                avatar: postPerson.avatar,
+                _id: post._id,
+                content: post.content,
+                feeling: post.feeling,
+                visibleFor: post.visibleFor,
+                images: newImages,
+                createdAt: post.createdAt,
+                comments: post.comments.length,
+                reactions: post.reactions,
+                postType: post.postType,
+            };
+
+            return handleResponse({
+                message: GET_DETAIL_POST_SUCCESS,
+                data: returnPost,
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: error.response?.error || ERROR_GET_DETAIL_POST,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
             });
         }
     }
