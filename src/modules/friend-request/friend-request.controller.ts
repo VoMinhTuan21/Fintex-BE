@@ -26,14 +26,21 @@ export class FriendRequestController {
         return await this.friendReqService.checkRelationship((req.user as IJWTInfo)._id, toId);
     }
 
-    @Get('/receive-friend-req')
+    @Get('/receive')
     @ApiBearerAuth('access_token')
     @UseGuards(JwtGuard)
-    async getFriendReqForPagination(@Req() req: Request) {
+    async getReceiveFriendReqForPagination(@Req() req: Request) {
         return await this.friendReqService.getReceiveFriendReqForPagination((req.user as IJWTInfo)._id);
     }
 
-    @Get('/receive-friend-req-pagination?')
+    @Get('/send')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    async getSendFriendReqForPagination(@Req() req: Request) {
+        return await this.friendReqService.getSendFriendReqForPagination((req.user as IJWTInfo)._id);
+    }
+
+    @Get('/friend-req-pagination?')
     @ApiBearerAuth('access_token')
     @UseGuards(JwtGuard)
     async getFriendReqPagination(@Req() req: Request, @Query() paginate: FriendReqPaginationDto) {
@@ -41,6 +48,7 @@ export class FriendRequestController {
             (req.user as IJWTInfo)._id,
             parseInt(paginate.limit),
             paginate.after,
+            paginate.type,
         );
     }
 
