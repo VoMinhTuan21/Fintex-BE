@@ -28,7 +28,7 @@ export class EventsGateway {
     }
 
     sendFriendReq(data: FriendReqDto, sendTo: string) {
-        this.server.emit(sendTo, { ...data, type: 'friendReq' });
+        this.server.emit(sendTo, { ...data, typeSocket: 'friendReq' });
     }
 
     async handleConnection(client: Socket) {
@@ -49,11 +49,11 @@ export class EventsGateway {
 
             //send notification to friends of current user to add them on online friend
             onlineFriends.forEach((friendId) => {
-                this.server.emit(friendId._id.toString(), { onlineFriends: [currUser], type: 'friendsOnline' });
+                this.server.emit(friendId._id.toString(), { onlineFriends: [currUser], typeSocket: 'friendsOnline' });
             });
 
             // send notification to current user when he/her first login with his/her online friends
-            this.server.emit(userId, { onlineFriends, type: 'friendsOnline' });
+            this.server.emit(userId, { onlineFriends, typeSocket: 'friendsOnline' });
             this.server.emit(userId, 'you connected to socket server');
         }
     }
@@ -73,7 +73,7 @@ export class EventsGateway {
 
             // send notification to all friends is online that current user has just offlined
             onlineFriends.forEach((friendId) => {
-                this.server.emit(friendId._id.toString(), { offlineUser: userId, type: 'friendOffline' });
+                this.server.emit(friendId._id.toString(), { offlineUser: userId, typeSocket: 'friendOffline' });
             });
         }
     }

@@ -1,7 +1,14 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { ArrayNotEmpty, IsArray, IsMongoId, IsNotEmptyObject, ValidateNested } from 'class-validator';
-import { type } from 'os';
+import {
+    ArrayNotEmpty,
+    IsArray,
+    IsMongoId,
+    IsNotEmpty,
+    IsNumberString,
+    IsOptional,
+    ValidateNested,
+} from 'class-validator';
 
 class UserConv {
     @IsMongoId()

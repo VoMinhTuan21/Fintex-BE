@@ -6,7 +6,7 @@ export class MessageResDto {
         images?: string[];
         messType: 'text' | 'image';
     }[];
-    createdAt: string;
+    updatedAt: string;
 }
 
 export class MessagePaginateResDto {

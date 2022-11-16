@@ -15,6 +15,9 @@ import { FriendRequestModule } from './modules/friend-request/friend-request.mod
 import { EventModule } from './modules/event/event.module';
 import { ConversationModule } from './modules/conversation/conversation.module';
 import { MessageModule } from './modules/message/message.module';
+import { ClientProxyFactory, ClientsModule, Transport } from '@nestjs/microservices';
+import { MqttModule } from './modules/mqtt/mqtt.module';
+import { MqttService } from './modules/mqtt/mqtt.service';
 
 @Module({
     imports: [
@@ -36,6 +39,18 @@ import { MessageModule } from './modules/message/message.module';
             }),
             inject: [ConfigService],
         }),
+        // ClientsModule.registerAsync([
+        //     {
+        //         name: 'MQTT_SERVICE',
+        //         inject: [ConfigService],
+        //         useFactory: (configService: ConfigService) => ({
+        //             transport: Transport.MQTT,
+        //             options: {
+        //                 url: configService.get<string>('MQTT_BROKER'),
+        //             },
+        //         }),
+        //     },
+        // ]),
         UserModule,
         AuthModule,
         FeelingModule,
@@ -47,8 +62,23 @@ import { MessageModule } from './modules/message/message.module';
         EventModule,
         ConversationModule,
         MessageModule,
+        MqttModule,
     ],
     controllers: [],
-    providers: [],
+    providers: [
+        // {
+        //     provide: 'MQTT_SERVICE',
+        //     useFactory: (configService: ConfigService) => {
+        //         const mqttBroker = configService.get<string>('MQTT_BROKER');
+        //         return ClientProxyFactory.create({
+        //             transport: Transport.MQTT,
+        //             options: {
+        //                 url: mqttBroker,
+        //             },
+        //         });
+        //     },
+        //     inject: [ConfigService],
+        // },
+    ],
 })
 export class AppModule {}

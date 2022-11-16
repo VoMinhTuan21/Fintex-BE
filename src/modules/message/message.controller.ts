@@ -18,11 +18,12 @@ import { imageFileFilter } from '../../utils';
 import { MessageService } from './message.service';
 import { Request } from 'express';
 import { ValidateMongoId } from '../../utils/validate-pipe';
+import { MqttService } from '../mqtt/mqtt.service';
 
 @ApiTags('Message')
 @Controller('message')
 export class MessageController {
-    constructor(private readonly messageService: MessageService) {}
+    constructor(private readonly messageService: MessageService, private readonly mqttService: MqttService) {}
 
     @Post()
     @ApiBearerAuth('access_token')
@@ -40,6 +41,12 @@ export class MessageController {
         }
 
         return this.messageService.create(dto, (req.user as IJWTInfo)._id);
+    }
+    @Get('first-time/:conversationId')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    getFirstTime(@Param('conversationId', ValidateMongoId) conversationId: string, @Req() req: Request) {
+        return this.messageService.getFirstTime(conversationId, (req.user as IJWTInfo)._id);
     }
 
     @Get('/:conversationId?')

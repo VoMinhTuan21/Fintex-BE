@@ -15,9 +15,9 @@ export class ConversationResDto {
         _id: string;
         message: {
             text?: string;
-            images?: string;
+            images?: string[];
             messType: 'text' | 'image';
         }[];
-        createdAt: string;
+        updatedAt: string;
     }[];
 }

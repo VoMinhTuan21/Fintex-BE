@@ -40,6 +40,18 @@ export class Message {
         images?: string[];
         messType: 'text' | 'image';
     }[];
+
+    @Prop([
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+        },
+    ])
+    seen: UserDocument[] | string[];
 }
 
 export const MessageSchema = SchemaFactory.createForClass(Message);
+
+MessageSchema.pre('save', function () {
+    this.set({ updatedAt: new Date() });
+});

@@ -1,6 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { isNotEmpty } from 'class-validator';
 import { Model } from 'mongoose';
 import {
     CREATE_MESSAGE_SUCCESSFULLY,
@@ -13,10 +12,10 @@ import {
 } from '../../constances';
 import { CreateMessageDto } from '../../dto/request/message.dto';
 import { handleResponse } from '../../dto/response';
-import { Conversation, ConversationDocument } from '../../schemas/conversation.schema';
 import { Message, MessageDocument } from '../../schemas/message.schema';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { ConversationService } from '../conversation/conversation.service';
+import { MqttService } from '../mqtt/mqtt.service';
 
 @Injectable()
 export class MessageService {
@@ -24,12 +23,12 @@ export class MessageService {
         @InjectModel(Message.name) private readonly messageModel: Model<MessageDocument>,
         private readonly cloudinaryService: CloudinaryService,
         private readonly conversationService: ConversationService,
+        private readonly mqttService: MqttService,
     ) {}
 
     async create(content: CreateMessageDto, senderId: string) {
         try {
             const conversation = await this.conversationService.findById(content.conversationId);
-
             if (!conversation) {
                 return handleResponse({
                     error: ERROR_NOT_FOUND_CONVERSATION,
@@ -44,6 +43,9 @@ export class MessageService {
                     statusCode: HttpStatus.BAD_REQUEST,
                 });
             }
+
+            const receiverIds = conversation.participants as string[];
+            receiverIds.splice(indexUser, 1);
 
             const idLastestMess = conversation.messages.length > 0 ? (conversation.messages[0] as string) : '';
 
@@ -79,14 +81,19 @@ export class MessageService {
 
                     await lastestMess.save();
 
+                    const messageRes = {
+                        _id: lastestMess._id,
+                        sender: lastestMess.sender,
+                        message: [lastestMess.message[lastestMess.message.length - 1]],
+                        createdAt: lastestMess.createdAt,
+                        conversationId: content.conversationId,
+                    };
+
+                    this.mqttService.sendMessage(receiverIds, messageRes);
+
                     return handleResponse({
                         message: CREATE_MESSAGE_SUCCESSFULLY,
-                        data: {
-                            _id: lastestMess._id,
-                            senderId: lastestMess.sender,
-                            message: lastestMess.message[lastestMess.message.length - 1],
-                            createdAt: lastestMess.createdAt,
-                        },
+                        data: messageRes,
                     });
                 }
             }
@@ -123,9 +130,19 @@ export class MessageService {
 
             await this.conversationService.addMessage(content.conversationId, message._id);
 
+            const messageRes = {
+                _id: message._id,
+                sender: message.sender,
+                message: message.message,
+                createdAt: message.createdAt,
+                conversationId: content.conversationId,
+            };
+
+            this.mqttService.sendMessage(receiverIds, messageRes);
+
             return handleResponse({
                 message: CREATE_MESSAGE_SUCCESSFULLY,
-                data: message,
+                data: messageRes,
             });
         } catch (error) {
             console.log('error: ', error);
@@ -178,17 +195,34 @@ export class MessageService {
                 const endTime = new Date(firstMessTime.getTime() - limitTime * 60 * 1000);
 
                 const messages = await this.messageModel
-                    .find({
-                        _id: { $in: messagesId },
-                        createdAt: { $gte: endTime },
-                    })
-                    .sort({ createdAt: -1 });
+                    .find(
+                        {
+                            _id: { $in: messagesId },
+                            createdAt: { $gte: endTime },
+                        },
+                        { createdAt: 0, __v: 0 },
+                    )
+                    .sort({ updatedAt: -1 });
 
                 console.log('messages.length: ', messages.length);
 
                 const idLastMessage = messages[messages.length - 1]._id;
                 const indexLastMessage = messagesId.findIndex((item) => item.toString() === idLastMessage.toString());
                 console.log('indexLastMessage: ', indexLastMessage);
+
+                for (const message of messages) {
+                    for (const item of message.message) {
+                        if (item.messType === 'image') {
+                            const urls: string[] = [];
+                            for (const image of item.images) {
+                                const url = await this.cloudinaryService.getImageUrl(image);
+                                urls.push(url);
+                            }
+
+                            item.images = urls;
+                        }
+                    }
+                }
 
                 return handleResponse({
                     message: GET_MESSAGES_SUCCESSFULLY,
@@ -206,6 +240,64 @@ export class MessageService {
                     data: [],
                 });
             }
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: ERROR_GET_PAGINATE_MESSAGES,
+                statusCode: HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async getFirstTime(conversationId: string, userId: string) {
+        try {
+            const conversation = await this.conversationService.findById(conversationId);
+            if (!conversation) {
+                return handleResponse({
+                    error: ERROR_NOT_FOUND_CONVERSATION,
+                    statusCode: HttpStatus.NOT_FOUND,
+                });
+            }
+
+            const indexUser = conversation.participants.findIndex((item: any) => item.toString() === userId);
+            if (indexUser === -1) {
+                return handleResponse({
+                    error: ERROR_USER_NOT_IN_CONVERSATION,
+                    statusCode: HttpStatus.BAD_REQUEST,
+                });
+            }
+
+            const messagesId = conversation.messages.slice(0, 20) as string[];
+            const messages = await this.messageModel
+                .find(
+                    {
+                        _id: { $in: messagesId },
+                    },
+                    { createdAt: 0, __v: 0 },
+                )
+                .sort({ updatedAt: -1 });
+
+            for (const message of messages) {
+                for (const item of message.message) {
+                    if (item.messType === 'image') {
+                        const urls: string[] = [];
+                        for (const image of item.images) {
+                            const url = await this.cloudinaryService.getImageUrl(image);
+                            urls.push(url);
+                        }
+
+                        item.images = urls;
+                    }
+                }
+            }
+
+            return handleResponse({
+                message: GET_MESSAGES_SUCCESSFULLY,
+                data: {
+                    messages: messages,
+                    after: conversation.messages.length < 20 ? 'end' : conversation.messages[20],
+                },
+            });
         } catch (error) {
             console.log('error: ', error);
             return handleResponse({
