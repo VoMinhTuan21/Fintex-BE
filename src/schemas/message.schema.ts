@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { SchemaTimestampsConfig } from 'mongoose';
+import { SubMessage, SubMessageDocument } from './sub-message.schema';
 import { UserDocument } from './user.schema';
 
 export type MessageDocument = Message & Document & SchemaTimestampsConfig;
@@ -18,36 +19,11 @@ export class Message {
 
     @Prop([
         {
-            type: {
-                text: {
-                    type: String,
-                    required: false,
-                },
-                images: {
-                    type: [String],
-                    required: false,
-                },
-                messType: {
-                    type: String,
-                    enum: ['text', 'image'],
-                },
-            },
-            required: true,
-        },
-    ])
-    message: {
-        text?: string;
-        images?: string[];
-        messType: 'text' | 'image';
-    }[];
-
-    @Prop([
-        {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
+            ref: 'SubMessage',
         },
     ])
-    seen: UserDocument[] | string[];
+    message: SubMessageDocument[] | string[];
 }
 
 export const MessageSchema = SchemaFactory.createForClass(Message);

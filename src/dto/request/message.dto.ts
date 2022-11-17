@@ -51,4 +51,9 @@ export class SeenMessageDto {
     @IsMongoId()
     @IsNotEmpty()
     conversationId: string;
+
+    @ApiProperty({ type: 'string' })
+    @IsMongoId()
+    @IsNotEmpty()
+    subMessageId: string;
 }
