@@ -106,13 +106,28 @@ export class ConversationService {
             const conversations = (await this.conversationModel
                 .find({ participants: userId }, { _id: 1, participants: 1, messages: { $slice: 1 } })
                 .populate('participants', { _id: 1, name: 1, avatar: 1 })
-                .populate('messages', {
-                    _id: 1,
-                    message: { $slice: 1 },
-                    seen: 1,
-                    sender: 1,
-                    updatedAt: 1,
-                })) as ConversationResDto[];
+                .populate([
+                    {
+                        path: 'messages',
+                        model: 'Message',
+                        select: {
+                            _id: 1,
+                            message: { $slice: 1 },
+                            sender: 1,
+                            updatedAt: 1,
+                        },
+                        populate: {
+                            path: 'message',
+                            model: 'SubMessage',
+                        },
+                    },
+                ])) as ConversationResDto[];
+            // .populate('messages', {
+            //     _id: 1,
+            //     message: { $slice: 1 },
+            //     sender: 1,
+            //     updatedAt: 1,
+            // })) as ConversationResDto[];
 
             conversations.sort((a, b) => {
                 const timeB = b.messages.length > 0 ? new Date(b.messages[0].updatedAt.toString()).getTime() : 0;
