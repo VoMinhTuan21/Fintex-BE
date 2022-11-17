@@ -4,6 +4,7 @@ import {
     Get,
     Param,
     Post,
+    Put,
     Query,
     Req,
     UploadedFiles,
@@ -12,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
-import { CreateMessageDto, PaginateMessageDto } from '../../dto/request/message.dto';
+import { CreateMessageDto, PaginateMessageDto, SeenMessageDto } from '../../dto/request/message.dto';
 import { JwtGuard } from '../../guards/jwt.guard';
 import { imageFileFilter } from '../../utils';
 import { MessageService } from './message.service';
@@ -63,5 +64,16 @@ export class MessageController {
             query.after,
             (req.user as IJWTInfo)._id,
         );
+    }
+
+    @Put('/seen/:messageId')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    seenMessage(
+        @Param('messageId', ValidateMongoId) messageId: string,
+        @Body() body: SeenMessageDto,
+        @Req() req: Request,
+    ) {
+        return this.messageService.seenMessage(body.conversationId, messageId, (req.user as IJWTInfo)._id);
     }
 }

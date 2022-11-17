@@ -45,3 +45,10 @@ export class PaginateMessageDto {
     @IsMongoId()
     after: string;
 }
+
+export class SeenMessageDto {
+    @ApiProperty({ type: 'string' })
+    @IsMongoId()
+    @IsNotEmpty()
+    conversationId: string;
+}

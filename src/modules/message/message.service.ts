@@ -1,14 +1,18 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import {
     CREATE_MESSAGE_SUCCESSFULLY,
     ERROR_AFTER_NOT_FOUND,
     ERROR_CREATE_MESSAGE,
     ERROR_GET_PAGINATE_MESSAGES,
+    ERROR_MESSAGE_NOT_FOUND,
     ERROR_NOT_FOUND_CONVERSATION,
+    ERROR_SEEN_MESSAGE,
+    ERROR_USER_NOT_ALLOWED_TO_SEE_MESSAGE,
     ERROR_USER_NOT_IN_CONVERSATION,
     GET_MESSAGES_SUCCESSFULLY,
+    SEEN_MESSAGE_SUCCESSFULLY,
 } from '../../constances';
 import { CreateMessageDto } from '../../dto/request/message.dto';
 import { handleResponse } from '../../dto/response';
@@ -305,6 +309,38 @@ export class MessageService {
             return handleResponse({
                 error: ERROR_GET_PAGINATE_MESSAGES,
                 statusCode: HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async seenMessage(conversationId: string, messageId: string, userId: string) {
+        try {
+            const message = await this.messageModel.findById(messageId);
+            if (message.sender.toString() === userId) {
+                return handleResponse({
+                    error: ERROR_USER_NOT_ALLOWED_TO_SEE_MESSAGE,
+                    statusCode: HttpStatus.BAD_REQUEST,
+                });
+            }
+
+            await this.messageModel.findByIdAndUpdate(messageId, {
+                $push: {
+                    seen: userId,
+                },
+            });
+            return handleResponse({
+                message: SEEN_MESSAGE_SUCCESSFULLY,
+                data: {
+                    conversationId,
+                    messageId,
+                    userId,
+                },
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: error.response?.error || ERROR_SEEN_MESSAGE,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
             });
         }
     }
