@@ -30,7 +30,7 @@ async function bootstrap() {
         transport: Transport.MQTT,
         options: {
             // url: 'mqtt://broker.emqx.io:1883',
-            url: 'mqtt://192.168.137.220:1884',
+            url: config.get<string>('MQTT_BROKER'),
         },
     });
     mqtt.listen();

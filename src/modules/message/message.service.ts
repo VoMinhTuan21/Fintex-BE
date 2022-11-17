@@ -86,6 +86,7 @@ export class MessageService {
                         sender: lastestMess.sender,
                         message: [lastestMess.message[lastestMess.message.length - 1]],
                         createdAt: lastestMess.createdAt,
+                        seen: lastestMess.seen,
                         conversationId: content.conversationId,
                     };
 
@@ -135,6 +136,7 @@ export class MessageService {
                 sender: message.sender,
                 message: message.message,
                 createdAt: message.createdAt,
+                seen: message.seen,
                 conversationId: content.conversationId,
             };
 

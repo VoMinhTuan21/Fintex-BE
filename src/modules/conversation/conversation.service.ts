@@ -107,13 +107,18 @@ export class ConversationService {
             const conversations = (await this.conversationModel
                 .find({ participants: userId }, { _id: 1, participants: 1, messages: { $slice: 1 } })
                 .populate('participants', { _id: 1, name: 1, avatar: 1 })
-                .populate('messages', { _id: 1, message: { $slice: 1 }, updatedAt: 1 })) as ConversationResDto[];
+                .populate('messages', {
+                    _id: 1,
+                    message: { $slice: 1 },
+                    seen: 1,
+                    updatedAt: 1,
+                })) as ConversationResDto[];
 
-            conversations.sort(
-                (a, b) =>
-                    new Date(b.messages[0].updatedAt.toString()).getTime() -
-                    new Date(a.messages[0].updatedAt.toString()).getTime(),
-            );
+            conversations.sort((a, b) => {
+                const timeB = b.messages.length > 0 ? new Date(b.messages[0].updatedAt.toString()).getTime() : 0;
+                const timeA = a.messages.length > 0 ? new Date(a.messages[0].updatedAt.toString()).getTime() : 0;
+                return timeB - timeA;
+            });
 
             for (const conv of conversations) {
                 const indexMe = conv.participants.findIndex((item) => item._id.toString() === userId);
