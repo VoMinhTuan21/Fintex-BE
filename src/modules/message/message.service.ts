@@ -83,6 +83,8 @@ export class MessageService {
                         });
                     }
 
+                    lastestMess.seen = [];
+
                     await lastestMess.save();
 
                     const messageRes = {
@@ -322,19 +324,28 @@ export class MessageService {
                     statusCode: HttpStatus.BAD_REQUEST,
                 });
             }
+            const conversation = await this.conversationService.findById(conversationId);
+            const receivers = conversation.participants as string[];
+            const index = receivers.findIndex((item: any) => item.toString() === userId);
+            receivers.splice(index, 1);
 
             await this.messageModel.findByIdAndUpdate(messageId, {
                 $push: {
                     seen: userId,
                 },
             });
+
+            const data = {
+                conversationId,
+                messageId,
+                userId,
+            };
+
+            this.mqttService.seenMessage(receivers, data);
+
             return handleResponse({
                 message: SEEN_MESSAGE_SUCCESSFULLY,
-                data: {
-                    conversationId,
-                    messageId,
-                    userId,
-                },
+                data,
             });
         } catch (error) {
             console.log('error: ', error);

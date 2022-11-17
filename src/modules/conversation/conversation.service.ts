@@ -111,6 +111,7 @@ export class ConversationService {
                     _id: 1,
                     message: { $slice: 1 },
                     seen: 1,
+                    sender: 1,
                     updatedAt: 1,
                 })) as ConversationResDto[];
 
