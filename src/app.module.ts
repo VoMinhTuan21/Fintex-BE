@@ -19,6 +19,7 @@ import { MessageModule } from './modules/message/message.module';
 import { ClientProxyFactory, ClientsModule, Transport } from '@nestjs/microservices';
 import { MqttModule } from './modules/mqtt/mqtt.module';
 import { MqttService } from './modules/mqtt/mqtt.service';
+import { SubMessageModule } from './modules/sub-message/sub-message.module';
 
 @Module({
     imports: [
@@ -65,6 +66,7 @@ import { MqttService } from './modules/mqtt/mqtt.service';
         ConversationModule,
         MessageModule,
         MqttModule,
+        SubMessageModule,
     ],
     controllers: [],
     providers: [

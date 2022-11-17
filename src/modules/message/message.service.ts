@@ -18,9 +18,11 @@ import {
 import { CreateMessageDto } from '../../dto/request/message.dto';
 import { handleResponse } from '../../dto/response';
 import { Message, MessageDocument } from '../../schemas/message.schema';
+import { SubMessage, SubMessageDocument } from '../../schemas/sub-message.schema';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { ConversationService } from '../conversation/conversation.service';
 import { MqttService } from '../mqtt/mqtt.service';
+import { SubMessageService } from '../sub-message/sub-message.service';
 
 @Injectable()
 export class MessageService {
@@ -29,6 +31,7 @@ export class MessageService {
         private readonly cloudinaryService: CloudinaryService,
         private readonly conversationService: ConversationService,
         private readonly mqttService: MqttService,
+        private readonly subMessService: SubMessageService,
     ) {}
 
     async create(content: CreateMessageDto, senderId: string) {
@@ -66,6 +69,8 @@ export class MessageService {
                     now.getTime() - lastesMessTime.getTime() <= 120000 &&
                     lastestMess.sender.toString() === senderId
                 ) {
+                    let subMessRes: any;
+
                     if (content.type === 'image' && content.images) {
                         const publicIds: string[] = [];
                         for (const image of content.images) {
@@ -73,27 +78,21 @@ export class MessageService {
                             publicIds.push(public_id);
                         }
 
-                        lastestMess.message.push({
-                            images: publicIds,
-                            messType: 'image',
-                        });
-                    } else if (content.type === 'text') {
-                        lastestMess.message.push({
-                            text: content.text,
-                            messType: 'text',
-                        });
-                    }
+                        subMessRes = await this.subMessService.create('image', undefined, publicIds);
 
-                    lastestMess.seen = [];
+                        lastestMess.message.push(subMessRes.data._id);
+                    } else if (content.type === 'text') {
+                        subMessRes = await this.subMessService.create('text', content.text);
+                        lastestMess.message.push(subMessRes.data._id);
+                    }
 
                     await lastestMess.save();
 
                     const messageRes = {
                         _id: lastestMess._id,
                         sender: lastestMess.sender,
-                        message: [lastestMess.message[lastestMess.message.length - 1]],
+                        message: [subMessRes.data],
                         createdAt: lastestMess.createdAt,
-                        seen: lastestMess.seen,
                         conversationId: content.conversationId,
                     };
 
@@ -107,6 +106,7 @@ export class MessageService {
             }
 
             let message: MessageDocument;
+            let subMessRes: any;
 
             if (content.type === 'image' && content.images) {
                 const publicIds: string[] = [];
@@ -115,24 +115,17 @@ export class MessageService {
                     publicIds.push(public_id);
                 }
 
+                subMessRes = await this.subMessService.create('image', undefined, publicIds);
+
                 message = await this.messageModel.create({
                     sender: senderId,
-                    message: [
-                        {
-                            images: publicIds,
-                            messType: 'image',
-                        },
-                    ],
+                    message: [subMessRes.data._id],
                 });
             } else if (content.type === 'text') {
+                subMessRes = await this.subMessService.create('text', content.text);
                 message = await this.messageModel.create({
                     sender: senderId,
-                    message: [
-                        {
-                            text: content.text,
-                            messType: 'text',
-                        },
-                    ],
+                    message: [subMessRes.data._id],
                 });
             }
 
@@ -141,9 +134,8 @@ export class MessageService {
             const messageRes = {
                 _id: message._id,
                 sender: message.sender,
-                message: message.message,
+                message: [subMessRes.data],
                 createdAt: message.createdAt,
-                seen: message.seen,
                 conversationId: content.conversationId,
             };
 
@@ -211,6 +203,7 @@ export class MessageService {
                         },
                         { createdAt: 0, __v: 0 },
                     )
+                    .populate('message')
                     .sort({ updatedAt: -1 });
 
                 console.log('messages.length: ', messages.length);
@@ -220,7 +213,7 @@ export class MessageService {
                 console.log('indexLastMessage: ', indexLastMessage);
 
                 for (const message of messages) {
-                    for (const item of message.message) {
+                    for (const item of message.message as SubMessage[]) {
                         if (item.messType === 'image') {
                             const urls: string[] = [];
                             for (const image of item.images) {
@@ -284,10 +277,11 @@ export class MessageService {
                     },
                     { createdAt: 0, __v: 0 },
                 )
+                .populate('message')
                 .sort({ updatedAt: -1 });
 
             for (const message of messages) {
-                for (const item of message.message) {
+                for (const item of message.message as SubMessage[]) {
                     if (item.messType === 'image') {
                         const urls: string[] = [];
                         for (const image of item.images) {
@@ -316,7 +310,7 @@ export class MessageService {
         }
     }
 
-    async seenMessage(conversationId: string, messageId: string, userId: string) {
+    async seenMessage(conversationId: string, messageId: string, subMessageId: string, userId: string) {
         try {
             const message = await this.messageModel.findById(messageId);
             if (message.sender.toString() === userId) {
@@ -330,16 +324,13 @@ export class MessageService {
             const index = receivers.findIndex((item: any) => item.toString() === userId);
             receivers.splice(index, 1);
 
-            await this.messageModel.findByIdAndUpdate(messageId, {
-                $push: {
-                    seen: userId,
-                },
-            });
+            await this.subMessService.saw(subMessageId, userId);
 
             const data = {
                 conversationId,
                 messageId,
                 userId,
+                subMessageId,
             };
 
             this.mqttService.seenMessage(receivers, data);

@@ -74,6 +74,11 @@ export class MessageController {
         @Body() body: SeenMessageDto,
         @Req() req: Request,
     ) {
-        return this.messageService.seenMessage(body.conversationId, messageId, (req.user as IJWTInfo)._id);
+        return this.messageService.seenMessage(
+            body.conversationId,
+            messageId,
+            body.subMessageId,
+            (req.user as IJWTInfo)._id,
+        );
     }
 }

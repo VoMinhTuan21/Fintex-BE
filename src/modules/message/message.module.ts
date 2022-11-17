@@ -4,6 +4,7 @@ import { Message, MessageSchema } from '../../schemas/message.schema';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 import { ConversationModule } from '../conversation/conversation.module';
 import { MqttModule } from '../mqtt/mqtt.module';
+import { SubMessageModule } from '../sub-message/sub-message.module';
 import { MessageController } from './message.controller';
 import { MessageService } from './message.service';
 
@@ -13,6 +14,7 @@ import { MessageService } from './message.service';
         ConversationModule,
         CloudinaryModule,
         MqttModule,
+        SubMessageModule,
     ],
     controllers: [MessageController],
     providers: [MessageService],
