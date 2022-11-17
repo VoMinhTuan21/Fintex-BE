@@ -2,18 +2,19 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
 import {
-    CREATE_MESSAGE_SUCCESSFULLY,
-    ERROR_AFTER_NOT_FOUND,
-    ERROR_CREATE_MESSAGE,
-    ERROR_GET_PAGINATE_MESSAGES,
-    ERROR_MESSAGE_NOT_FOUND,
     ERROR_NOT_FOUND_CONVERSATION,
-    ERROR_SEEN_MESSAGE,
-    ERROR_USER_NOT_ALLOWED_TO_SEE_MESSAGE,
     ERROR_USER_NOT_IN_CONVERSATION,
+} from '../../constances/conversationResponseMessage';
+import {
+    CREATE_MESSAGE_SUCCESSFULLY,
+    ERROR_CREATE_MESSAGE,
+    ERROR_AFTER_NOT_FOUND,
     GET_MESSAGES_SUCCESSFULLY,
+    ERROR_GET_PAGINATE_MESSAGES,
+    ERROR_USER_NOT_ALLOWED_TO_SEE_MESSAGE,
     SEEN_MESSAGE_SUCCESSFULLY,
-} from '../../constances';
+    ERROR_SEEN_MESSAGE,
+} from '../../constances/messageResponseMessage';
 import { CreateMessageDto } from '../../dto/request/message.dto';
 import { handleResponse } from '../../dto/response';
 import { Message, MessageDocument } from '../../schemas/message.schema';

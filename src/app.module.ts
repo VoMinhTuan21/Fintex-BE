@@ -13,6 +13,7 @@ import { CommentModule } from './modules/comment/comment.module';
 import { EducationModule } from './modules/education/education.module';
 import { FriendRequestModule } from './modules/friend-request/friend-request.module';
 import { EventModule } from './modules/event/event.module';
+import { NotificationModule } from './modules/notification/notification.module';
 import { ConversationModule } from './modules/conversation/conversation.module';
 import { MessageModule } from './modules/message/message.module';
 import { ClientProxyFactory, ClientsModule, Transport } from '@nestjs/microservices';
@@ -60,6 +61,7 @@ import { MqttService } from './modules/mqtt/mqtt.service';
         EducationModule,
         FriendRequestModule,
         EventModule,
+        NotificationModule,
         ConversationModule,
         MessageModule,
         MqttModule,

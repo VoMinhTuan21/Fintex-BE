@@ -24,6 +24,8 @@ import { CommnentResDto, CreateCommentResDto, ReactionCommentResDto } from '../.
 import { Comment, CommentDocument } from '../../schemas/comment.schema';
 import { ICommentsIdPaginate } from '../../types/post';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { EventsGateway } from '../event/event.gateway';
+import { NotificationService } from '../notification/notification.service';
 import { PostService } from '../post/post.service';
 import { UserService } from '../user/user.service';
 
@@ -34,6 +36,8 @@ export class CommentService {
         private readonly cloudinaryService: CloudinaryService,
         private readonly postService: PostService,
         private readonly userService: UserService,
+        private readonly notifyService: NotificationService,
+        private readonly eventGateway: EventsGateway,
     ) {}
 
     async getComments(commentsId: string[], after: string, ended: boolean, postId: string) {
@@ -217,6 +221,36 @@ export class CommentService {
                 after = await this.postService.getAfter(dto.postId, comment[0]._id.toString());
             }
 
+            // add notification socket
+            if (!dto.parentId) {
+                if (userId !== dto.postPersonId) {
+                    const notify = await this.notifyService.create({
+                        fromId: userId,
+                        toId: dto.postPersonId,
+                        type: 'commentPost',
+                        postId: dto.postId,
+                        postPersonId: dto.postPersonId,
+                    });
+
+                    this.eventGateway.sendNotify({ notify: notify.data }, dto.postPersonId);
+                }
+            } else {
+                console.log('vo reply comment notify');
+                const parentComment = await this.commentModel.findById(dto.parentId);
+
+                if (parentComment.userId.toString() !== userId) {
+                    const notify = await this.notifyService.create({
+                        fromId: userId,
+                        toId: parentComment.userId.toString(),
+                        type: 'replyComment',
+                        postId: dto.postId,
+                        postPersonId: dto.postPersonId,
+                    });
+
+                    this.eventGateway.sendNotify({ notify: notify.data }, parentComment.userId.toString());
+                }
+            }
+
             return handleResponse({
                 message: CREATE_COMMENT_SUCCESS,
                 data: {
@@ -337,7 +371,7 @@ export class CommentService {
         return result;
     }
 
-    async reaction(id: string, type: ReactionEnum, userId: string) {
+    async reaction(id: string, type: ReactionEnum, userId: string, postId: string, postPersonId: string) {
         try {
             const comment = await this.commentModel.findById(id);
             if (!comment) {
@@ -360,6 +394,18 @@ export class CommentService {
             }
 
             await comment.save();
+
+            if (comment.userId.toString() !== userId) {
+                const notify = await this.notifyService.create({
+                    fromId: userId,
+                    toId: comment.userId.toString(),
+                    type: 'reactionComment',
+                    postId,
+                    postPersonId,
+                });
+
+                this.eventGateway.sendNotify({ notify: notify.data }, comment.userId.toString());
+            }
 
             const outcome: ReactionCommentResDto = {
                 commentId: id,

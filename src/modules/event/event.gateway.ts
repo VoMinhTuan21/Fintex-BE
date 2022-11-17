@@ -28,7 +28,22 @@ export class EventsGateway {
     }
 
     sendFriendReq(data: FriendReqDto, sendTo: string) {
-        this.server.emit(sendTo, { ...data, typeSocket: 'friendReq' });
+        // return some thing like
+        // {
+        //     friendReq: {....}
+        //     typeSocket: 'notify'
+        // }
+        this.server.emit(sendTo, { friendReq: data, typeSocket: 'friendReq' });
+    }
+
+    sendNotify(data: any, sendTo: string) {
+        // return some thing like
+        // {
+        //     notify: {....}
+        //     typeSocket: 'notify'
+        //     friendReqId?: 'abcd'
+        // }
+        this.server.emit(sendTo, { ...data, typeSocket: 'notify' });
     }
 
     async handleConnection(client: Socket) {
