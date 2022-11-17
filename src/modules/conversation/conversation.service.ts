@@ -2,14 +2,13 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
 import {
-    CREATE_CONVERSATION_SUCCESSFULLY,
-    ERROR_ADD_MESSAGE_TO_CONVERSATION,
-    ERROR_CREATE_CONVERSATION,
     ERROR_EXISTED_CONVERSATION,
-    ERROR_FIND_CONVERSATION_BY_ID,
-    ERROR_GET_CONVERSATIONS,
+    CREATE_CONVERSATION_SUCCESSFULLY,
+    ERROR_CREATE_CONVERSATION,
+    ERROR_ADD_MESSAGE_TO_CONVERSATION,
     GET_CONVERSATIONS_SUCCESSFULLY,
-} from '../../constances';
+    ERROR_GET_CONVERSATIONS,
+} from '../../constances/conversationResponseMessage';
 import { CreateConversationDto } from '../../dto/request/conversation.dto';
 import { handleResponse } from '../../dto/response';
 import { ConversationResDto } from '../../dto/response/conversation.dto';
