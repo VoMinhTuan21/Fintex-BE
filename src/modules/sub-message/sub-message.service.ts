@@ -8,18 +8,32 @@ import {
 } from '../../constances/subMessResponseMessage';
 import { handleResponse } from '../../dto/response';
 import { SubMessage, SubMessageDocument } from '../../schemas/sub-message.schema';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
 @Injectable()
 export class SubMessageService {
-    constructor(@InjectModel(SubMessage.name) private subMessageModel: Model<SubMessageDocument>) {}
+    constructor(
+        @InjectModel(SubMessage.name) private subMessageModel: Model<SubMessageDocument>,
+        private readonly cloudinaryService: CloudinaryService,
+    ) {}
 
     async create(messType: string, text?: string, images?: string[]) {
         try {
-            const subMess = await this.subMessageModel.create({
+            const subMess = (await this.subMessageModel.create({
                 text,
                 images,
                 messType,
-            });
+            })) as SubMessage;
+
+            if (messType === 'image') {
+                const images: string[] = [];
+                for (const img of subMess.images as string[]) {
+                    const url = await this.cloudinaryService.getImageUrl(img);
+                    images.push(url);
+                }
+                subMess.images = images;
+            }
+
             return handleResponse({
                 message: CREATE_SUBMESSAGE_SUCCESS,
                 data: subMess,
