@@ -8,10 +8,12 @@ import {
     ERROR_ADD_MESSAGE_TO_CONVERSATION,
     GET_CONVERSATIONS_SUCCESSFULLY,
     ERROR_GET_CONVERSATIONS,
+    ERROR_FIND_ONE_CONVERSATION,
 } from '../../constances/conversationResponseMessage';
 import { CreateConversationDto } from '../../dto/request/conversation.dto';
 import { handleResponse } from '../../dto/response';
 import { ConversationResDto } from '../../dto/response/conversation.dto';
+import { User } from '../../schemas';
 import { Conversation, ConversationDocument } from '../../schemas/conversation.schema';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
@@ -38,13 +40,13 @@ export class ConversationService {
                     $project: {
                         _id: 0,
                         sameParticipants: { $setEquals: ['$participants', usersObjectId] },
-                        // differentParticipants: { $setDifference: ['$participants', usersObjectId] },
+                        differentParticipants: { $setDifference: ['$participants', usersObjectId] },
                     },
                 },
                 {
                     $match: {
                         sameParticipants: true,
-                        // differentParticipants: { $eq: [] },
+                        differentParticipants: { $eq: [] },
                     },
                 },
             ]);
@@ -56,9 +58,18 @@ export class ConversationService {
                 });
             }
 
-            const conversation = await this.conversationModel.create({
+            const conv = await this.conversationModel.create({
                 participants: users,
             });
+
+            const conversation = await this.conversationModel
+                .findById(conv._id, 'participants messages')
+                .populate('participants', 'name avatar');
+
+            for (let i = 0; i < conversation.participants.length; i++) {
+                const person = conversation.participants[i] as User;
+                person.avatar = await this.cloudinaryService.getImageUrl(person.avatar);
+            }
 
             return handleResponse({
                 message: CREATE_CONVERSATION_SUCCESSFULLY,
@@ -122,12 +133,6 @@ export class ConversationService {
                         },
                     },
                 ])) as ConversationResDto[];
-            // .populate('messages', {
-            //     _id: 1,
-            //     message: { $slice: 1 },
-            //     sender: 1,
-            //     updatedAt: 1,
-            // })) as ConversationResDto[];
 
             conversations.sort((a, b) => {
                 const timeB = b.messages.length > 0 ? new Date(b.messages[0].updatedAt.toString()).getTime() : 0;
