@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsMongoId, IsNumberString, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsMongoId, IsNumberString, IsOptional, IsString } from 'class-validator';
 
 export class CreateFriendReqDto {
     @ApiProperty({ type: String })
@@ -19,4 +19,9 @@ export class FriendReqPaginationDto {
     @IsNotEmpty()
     @IsOptional()
     after: string;
+
+    @ApiProperty({ type: String })
+    @IsString()
+    @IsNotEmpty()
+    type: string;
 }
