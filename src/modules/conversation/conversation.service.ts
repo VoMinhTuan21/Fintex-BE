@@ -147,6 +147,17 @@ export class ConversationService {
                 for (const person of conv.participants) {
                     person.avatar = await this.cloudinaryService.getImageUrl(person.avatar);
                 }
+
+                if (conv.messages.length > 0) {
+                    if (conv.messages[0].message[0].messType === 'image') {
+                        const urls: string[] = [];
+                        for (const image of conv.messages[0].message[0].images) {
+                            const url = await this.cloudinaryService.getImageUrl(image);
+                            urls.push(url);
+                        }
+                        conv.messages[0].message[0].images = urls;
+                    }
+                }
             }
 
             return handleResponse({

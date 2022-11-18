@@ -226,6 +226,19 @@ export class MessageService {
                     }
                 }
 
+                for (const mess of messages) {
+                    for (const subMess of mess.message as SubMessage[]) {
+                        if (subMess.messType === 'image') {
+                            const urls: string[] = [];
+                            for (const image of subMess.images) {
+                                const url = await this.cloudinaryService.getImageUrl(image);
+                                urls.push(url);
+                            }
+                            subMess.images = urls;
+                        }
+                    }
+                }
+
                 return handleResponse({
                     message: GET_MESSAGES_SUCCESSFULLY,
                     data: {

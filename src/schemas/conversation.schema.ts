@@ -26,6 +26,9 @@ export class Conversation {
         },
     ])
     messages: MessageDocument[] | string[];
+
+    @Prop({ type: String, required: false })
+    name: string;
 }
 
 export const ConversationSchema = SchemaFactory.createForClass(Conversation);
