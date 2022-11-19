@@ -115,7 +115,7 @@ export class ConversationService {
     async get(userId: string) {
         try {
             const conversations = (await this.conversationModel
-                .find({ participants: userId }, { _id: 1, participants: 1, messages: { $slice: 1 } })
+                .find({ participants: userId }, { _id: 1, participants: 1, name: 1, messages: { $slice: 1 } })
                 .populate('participants', { _id: 1, name: 1, avatar: 1 })
                 .populate([
                     {
