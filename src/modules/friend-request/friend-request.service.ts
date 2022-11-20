@@ -12,7 +12,8 @@ import {
     ERROR_FIND_USER_BY_NAME,
     ERROR_FRIEND_REQ_EXISTED,
     ERROR_GET_RECEIVE_FRIEND_REQ_FOR_PAGINATION,
-    ERROR_GET_RECEIVE_FRIEND_REQ_PAGINATION,
+    ERROR_GET_FRIEND_REQ_PAGINATION,
+    ERROR_GET_SEND_FRIEND_REQ_FOR_PAGINATION,
     FIND_USER_BY_NAME_SUCCESS,
     GET_FRIEND_REQ_FOR_PAGINATION_SUCCESS,
     GET_FRIEND_REQ_PAGINATION_SUCCESS,
@@ -157,20 +158,59 @@ export class FriendRequestService {
         }
     }
 
-    async getReceiveFriendReqPagination(userId: string, limit: number, after: string) {
+    async getSendFriendReqForPagination(userId: string) {
         try {
-            const response = await this.getReceiveFriendReqForPagination(userId);
-            const receiveFriendReqs = response.data;
+            const response: any[] = await this.friendReqModel
+                .find({ from: userId }, { _id: 1, to: 1, createdAt: 1 })
+                .sort({ createdAt: -1 })
+                .populate('to', 'name avatar');
+
+            const sendFriendRes: any[] = [];
+            for (let i = 0; i < response.length; i++) {
+                const toUser = response[i].to;
+                toUser.avatar = await this.cloudinaryService.getImageUrl(toUser.avatar);
+                sendFriendRes.push({
+                    _id: response[i]._id,
+                    user: {
+                        _id: toUser._id,
+                        name: toUser.name,
+                        avatar: toUser.avatar,
+                    },
+                });
+            }
+
+            return handleResponse({
+                message: GET_FRIEND_REQ_FOR_PAGINATION_SUCCESS,
+                data: sendFriendRes,
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: error.response?.error || ERROR_GET_SEND_FRIEND_REQ_FOR_PAGINATION,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async getReceiveFriendReqPagination(userId: string, limit: number, after: string, type: string) {
+        try {
+            let response: any;
+            if (type === 'receive') {
+                response = await this.getReceiveFriendReqForPagination(userId);
+            } else {
+                response = await this.getSendFriendReqForPagination(userId);
+            }
+            const friendReqs = response.data;
 
             if (after) {
-                const indexAfter = receiveFriendReqs.findIndex((req: any) => req._id.toString() === after);
+                const indexAfter = friendReqs.findIndex((req: any) => req._id.toString() === after);
                 if (indexAfter) {
-                    if (indexAfter + limit < receiveFriendReqs.length) {
+                    if (indexAfter + limit < friendReqs.length) {
                         return handleResponse({
                             message: GET_FRIEND_REQ_PAGINATION_SUCCESS,
                             data: {
-                                friendReqs: receiveFriendReqs.slice(indexAfter, indexAfter + limit),
-                                after: receiveFriendReqs[indexAfter + limit]._id,
+                                friendReqs: friendReqs.slice(indexAfter, indexAfter + limit),
+                                after: friendReqs[indexAfter + limit]._id,
                                 ended: false,
                             },
                         });
@@ -178,7 +218,7 @@ export class FriendRequestService {
                         return handleResponse({
                             message: GET_FRIEND_REQ_PAGINATION_SUCCESS,
                             data: {
-                                friendReqs: receiveFriendReqs.slice(indexAfter),
+                                friendReqs: friendReqs.slice(indexAfter),
                                 after: '',
                                 ended: true,
                             },
@@ -195,12 +235,12 @@ export class FriendRequestService {
                     });
                 }
             } else {
-                if (receiveFriendReqs.length > limit) {
+                if (friendReqs.length > limit) {
                     return handleResponse({
                         message: GET_FRIEND_REQ_PAGINATION_SUCCESS,
                         data: {
-                            friendReqs: receiveFriendReqs.slice(0, limit),
-                            after: receiveFriendReqs[limit]._id,
+                            friendReqs: friendReqs.slice(0, limit),
+                            after: friendReqs[limit]._id,
                             ended: false,
                         },
                     });
@@ -209,7 +249,7 @@ export class FriendRequestService {
                     return handleResponse({
                         message: GET_FRIEND_REQ_PAGINATION_SUCCESS,
                         data: {
-                            friendReqs: receiveFriendReqs,
+                            friendReqs: friendReqs,
                             after: '',
                             ended: true,
                         },
@@ -219,7 +259,7 @@ export class FriendRequestService {
         } catch (error) {
             console.log('error: ', error);
             return handleResponse({
-                error: error.response?.error || ERROR_GET_RECEIVE_FRIEND_REQ_PAGINATION,
+                error: error.response?.error || ERROR_GET_FRIEND_REQ_PAGINATION,
                 statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
             });
         }
