@@ -17,9 +17,11 @@ import {
     GET_ALBUM_SUCCESSFULLY,
     UPDATE_AVATAR_SUCCESSFULLY,
     UPDATE_COVER_SUCCESSFULLY,
+    GET_FRIENDS_SUCCESSFULLY,
+    ERROR_GET_FRIENDS,
 } from '../../constances';
 import { EditUserDto } from '../../dto/request/user.dto';
-import { AlbumResDto, handleResponse, UserProfileResDto, UserResDto } from '../../dto/response';
+import { AlbumResDto, FriendDto, handleResponse, UserProfileResDto, UserResDto } from '../../dto/response';
 import { User, UserDocument } from '../../schemas/user.schema';
 import { PostIdWithUser } from '../../types/classes';
 import { UpdateImage, VisibleFor } from '../../types/enums';
@@ -265,7 +267,10 @@ export class UserService {
             }
 
             user.email = dto.email;
-            user.name = dto.name;
+            user.name = {
+                ...dto.name,
+                fullName: dto.name.firstName + ' ' + dto.name.lastName,
+            };
             user.address = dto.address;
             user.birthday = dto.birthday;
             user.phone = dto.phone;
@@ -458,5 +463,50 @@ export class UserService {
         const friendIds: string[] = [];
         user.friends.forEach((id: any) => friendIds.push(id.toString()));
         return friendIds;
+    }
+
+    async getFriends(userId: string, limit: number, after: string) {
+        try {
+            let index = 0;
+            let newAfter = '';
+
+            const friends = (await (
+                await this.userModel.findById(userId, { friends: 1 }).populate('friends', '_id name avatar')
+            ).friends) as UserDocument[];
+
+            if (after) {
+                const indexFriend = friends.findIndex((fr) => fr._id.toString() === after);
+                console.log('indexFriend: ', indexFriend);
+                if (indexFriend > -1) {
+                    index = indexFriend;
+                }
+            }
+
+            const result = friends.slice(index, index + limit) as FriendDto[];
+
+            for (const friend of result) {
+                const avatar = await this.cloudinaryService.getImageUrl(friend.avatar);
+                friend.avatar = avatar;
+            }
+
+            if (index + limit >= friends.length) {
+                newAfter = 'end';
+            } else {
+                newAfter = friends[index + limit]._id;
+            }
+
+            return handleResponse({
+                message: GET_FRIENDS_SUCCESSFULLY,
+                data: {
+                    friends: result,
+                    after: newAfter,
+                },
+            });
+        } catch (error) {
+            return handleResponse({
+                statusCode: HttpStatus.BAD_REQUEST,
+                error: ERROR_GET_FRIENDS,
+            });
+        }
     }
 }

@@ -1,4 +1,5 @@
 import { Gender } from '../../types/enums';
+import { Name } from '../request';
 
 export class UserResDto {
     _id: string;
@@ -32,4 +33,14 @@ export class UserProfileResDto {
     gender: Gender;
     education: string;
     address: string;
+}
+
+export class FriendDto {
+    _id: string;
+    name: {
+        firstName: string;
+        lastName: string;
+        fullName: string;
+    };
+    avatar: string;
 }

@@ -57,3 +57,16 @@ export class AlbumParamPagination {
     @IsOptional()
     after: string;
 }
+
+export class FriendPaginationDto {
+    @ApiProperty({ type: String })
+    @IsNumberString()
+    @IsNotEmpty()
+    limit: string;
+
+    @ApiPropertyOptional({ type: String })
+    @IsNotEmpty()
+    @IsString()
+    @IsOptional()
+    after: string;
+}

@@ -17,7 +17,7 @@ import { UserService } from './user.service';
 import { Request } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { imageFileFilter } from '../../utils';
-import { AlbumParamPagination, UpdateAvatarCoverDto } from '../../dto/request/user.dto';
+import { AlbumParamPagination, FriendPaginationDto, UpdateAvatarCoverDto } from '../../dto/request/user.dto';
 import { EditUserDto } from '../../dto/request/user.dto';
 import { ValidateMongoId } from '../../utils/validate-pipe';
 
@@ -133,5 +133,23 @@ export class UserController {
             parseInt(paginate.limit),
             paginate.after,
         );
+    }
+
+    @Get('/friends')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    async getFriends(@Req() req: Request, @Query() paginate: FriendPaginationDto) {
+        return this.userService.getFriends((req.user as IJWTInfo)._id, parseInt(paginate.limit), paginate.after);
+    }
+
+    @Get('/friends/:id')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    async getFriendsOfFriend(
+        @Param('id', ValidateMongoId) id: string,
+        @Req() req: Request,
+        @Query() paginate: FriendPaginationDto,
+    ) {
+        return this.userService.getFriends(id, parseInt(paginate.limit), paginate.after);
     }
 }

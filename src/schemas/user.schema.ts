@@ -18,12 +18,14 @@ export class User {
         type: {
             firstName: String,
             lastName: String,
+            fullName: String,
         },
         required: true,
     })
     name: {
         firstName: string;
         lastName: string;
+        fullName: string;
     };
 
     @Prop({
