@@ -13,6 +13,11 @@ export class CreateCommentDto {
     @IsNotEmpty()
     postId: string;
 
+    @ApiProperty({ type: String })
+    @IsMongoId()
+    @IsNotEmpty()
+    postPersonId: string;
+
     @ApiPropertyOptional({ type: String })
     @IsMongoId()
     @IsNotEmpty()
@@ -82,4 +87,14 @@ export class ReactionCommentDto {
     @IsString()
     @IsNotEmpty()
     type: ReactionEnum;
+
+    @ApiProperty({ type: String })
+    @IsMongoId()
+    @IsNotEmpty()
+    postId: string;
+
+    @ApiProperty({ type: String })
+    @IsMongoId()
+    @IsNotEmpty()
+    postPersonId: string;
 }

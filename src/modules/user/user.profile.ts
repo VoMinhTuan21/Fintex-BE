@@ -2,7 +2,8 @@ import { AutomapperProfile, InjectMapper } from '@automapper/nestjs';
 import { createMap, forMember, mapFrom, Mapper } from '@automapper/core';
 import { Injectable } from '@nestjs/common';
 import { User } from '../../schemas/user.schema';
-import { UserProfileResDto, UserResDto } from '../../dto/response';
+import { StrangerDto, UserProfileResDto, UserResDto } from '../../dto/response';
+import { Stranger } from '../../types/classes/user';
 
 @Injectable()
 export class UserProfile extends AutomapperProfile {
@@ -92,6 +93,27 @@ export class UserProfile extends AutomapperProfile {
                 forMember(
                     (destination) => destination.education,
                     mapFrom((source) => source.education),
+                ),
+            );
+            createMap(
+                mapper,
+                Stranger,
+                StrangerDto,
+                forMember(
+                    (destination) => destination._id,
+                    mapFrom((source) => source._id),
+                ),
+                forMember(
+                    (destination) => destination.fullName,
+                    mapFrom((source) => source.name.fullName),
+                ),
+                forMember(
+                    (destination) => destination.avatar,
+                    mapFrom((source) => source.avatar),
+                ),
+                forMember(
+                    (destination) => destination.address,
+                    mapFrom((source) => source.address),
                 ),
             );
         };

@@ -35,6 +35,19 @@ export class UserProfileResDto {
     address: string;
 }
 
+export class StrangerDto {
+    _id: string;
+    fullName: string;
+    avatar: string;
+    address: string;
+    relationship: string;
+}
+
+export class StrangerPagination {
+    data: StrangerDto[];
+    after: string;
+}
+
 export class FriendDto {
     _id: string;
     name: {

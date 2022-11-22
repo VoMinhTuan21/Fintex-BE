@@ -17,7 +17,12 @@ import { UserService } from './user.service';
 import { Request } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { imageFileFilter } from '../../utils';
-import { AlbumParamPagination, FriendPaginationDto, UpdateAvatarCoverDto } from '../../dto/request/user.dto';
+import {
+    AlbumParamPagination,
+    GetStrangerDto,
+    FriendPaginationDto,
+    UpdateAvatarCoverDto,
+} from '../../dto/request/user.dto';
 import { EditUserDto } from '../../dto/request/user.dto';
 import { ValidateMongoId } from '../../utils/validate-pipe';
 
@@ -133,6 +138,13 @@ export class UserController {
             parseInt(paginate.limit),
             paginate.after,
         );
+    }
+
+    @Get('/strangers/:name?')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    async getStragers(@Param('name') name: string, @Query() query: GetStrangerDto, @Req() req: Request) {
+        return await this.userService.findByName(name, parseInt(query.limit), query.after, (req.user as IJWTInfo)._id);
     }
 
     @Get('/friends')

@@ -7,7 +7,6 @@ import {
     EDIT_USER_INFO_SUCCESSFULLY,
     ERROR_ADD_IMAGES_TO_ALBUM,
     ERROR_DELETE_IMAGES_IN_ALBUM,
-    ERROR_DELETE_POST,
     ERROR_EDIT_USER_INFO,
     ERROR_GET_USER_PROFILE,
     ERROR_GET_ALBUMS,
@@ -17,16 +16,31 @@ import {
     GET_ALBUM_SUCCESSFULLY,
     UPDATE_AVATAR_SUCCESSFULLY,
     UPDATE_COVER_SUCCESSFULLY,
-    GET_FRIENDS_SUCCESSFULLY,
+    ERROR_DELETE_POST,
+    ERROR_ADD_FRIEND,
     ERROR_GET_FRIENDS,
+    GET_FRIENDS_SUCCESSFULLY,
+    GET_STRANGERS_ERROR,
+    GET_STRANGERS_SUCCESS,
+    SUCCESS_ADD_FRIEND,
 } from '../../constances';
 import { EditUserDto } from '../../dto/request/user.dto';
-import { AlbumResDto, FriendDto, handleResponse, UserProfileResDto, UserResDto } from '../../dto/response';
 import { User, UserDocument } from '../../schemas/user.schema';
 import { PostIdWithUser } from '../../types/classes';
-import { UpdateImage, VisibleFor } from '../../types/enums';
+import { VisibleFor } from '../../types/enums';
+import { Stranger } from '../../types/classes/user';
 import { hashPasswords } from '../../utils';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import {
+    handleResponse,
+    UserResDto,
+    StrangerDto,
+    StrangerPagination,
+    UserProfileResDto,
+    AlbumResDto,
+    FriendDto,
+} from '../../dto/response';
+import { UpdateImage } from '../../types/enums/updateImage';
 
 @Injectable()
 export class UserService {
@@ -463,6 +477,67 @@ export class UserService {
         const friendIds: string[] = [];
         user.friends.forEach((id: any) => friendIds.push(id.toString()));
         return friendIds;
+    }
+
+    async findByName(name: string, limit: number, after: string, userId: string) {
+        try {
+            const source = await this.userModel.find(
+                { 'name.fullName': { $regex: name, $options: 'i' }, _id: { $ne: new mongoose.Types.ObjectId(userId) } },
+                { _id: 1, name: { fullName: 1 }, avatar: 1, address: 1 },
+            );
+
+            const users = this.mapper.mapArray(source, Stranger, StrangerDto);
+
+            const result: StrangerDto[] = [];
+            let newAfter = '';
+
+            if (after) {
+                const index = users.findIndex((item) => item._id.toString() === after);
+                result.push(...users.slice(index, index + limit));
+                newAfter = index + limit >= users.length ? '' : users[index + limit]._id;
+            } else {
+                result.push(...users.slice(0, limit));
+                newAfter = limit >= users.length ? '' : users[limit]._id;
+            }
+
+            for (const user of result) {
+                user.avatar = await this.cloudinaryService.getImageUrl(user.avatar);
+            }
+
+            const outcome: StrangerPagination = {
+                data: result,
+                after: newAfter,
+            };
+
+            return handleResponse({
+                message: GET_STRANGERS_SUCCESS,
+                data: outcome,
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: GET_STRANGERS_ERROR,
+                statusCode: HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async addFriend(userId: string, friendId: string) {
+        try {
+            await this.userModel.findByIdAndUpdate(userId, {
+                $push: { friends: friendId },
+            });
+            return handleResponse({
+                message: SUCCESS_ADD_FRIEND,
+                data: null,
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: error.response?.error || ERROR_ADD_FRIEND,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
     }
 
     async getFriends(userId: string, limit: number, after: string) {
