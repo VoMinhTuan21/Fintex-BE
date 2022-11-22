@@ -21,6 +21,8 @@ export const handleFriendReqNotiContent = (type: string) => {
             return 'đã gửi lời mời kết bạn';
         case 'acceptFriendReq':
             return 'đã chấp nhận lời mời kết bạn';
+        case 'deleteFriend':
+            return 'đã hủy kết bạn với bạn';
         default:
             return null;
     }

@@ -20,6 +20,7 @@ import { ClientProxyFactory, ClientsModule, Transport } from '@nestjs/microservi
 import { MqttModule } from './modules/mqtt/mqtt.module';
 import { MqttService } from './modules/mqtt/mqtt.service';
 import { SubMessageModule } from './modules/sub-message/sub-message.module';
+import { FriendModule } from './modules/friend/friend.module';
 
 @Module({
     imports: [
@@ -67,6 +68,7 @@ import { SubMessageModule } from './modules/sub-message/sub-message.module';
         MessageModule,
         MqttModule,
         SubMessageModule,
+        FriendModule,
     ],
     controllers: [],
     providers: [
