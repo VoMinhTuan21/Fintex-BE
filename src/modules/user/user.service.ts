@@ -2,7 +2,7 @@ import { Mapper } from '@automapper/core';
 import { InjectMapper } from '@automapper/nestjs';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import mongoose, { Model } from 'mongoose';
+import mongoose, { Model, mongo } from 'mongoose';
 import {
     EDIT_USER_INFO_SUCCESSFULLY,
     ERROR_ADD_IMAGES_TO_ALBUM,
@@ -23,6 +23,8 @@ import {
     GET_STRANGERS_ERROR,
     GET_STRANGERS_SUCCESS,
     SUCCESS_ADD_FRIEND,
+    DELETE_FRIEND_SUCCESSULLY,
+    ERROR_DELETE_FRIEND,
 } from '../../constances';
 import { EditUserDto } from '../../dto/request/user.dto';
 import { User, UserDocument } from '../../schemas/user.schema';
@@ -583,5 +585,17 @@ export class UserService {
                 error: ERROR_GET_FRIENDS,
             });
         }
+    }
+
+    async deleteFriends(userId: string, friendId: string) {
+        await this.userModel.updateOne(
+            { _id: new mongoose.Types.ObjectId(userId) },
+            { $pull: { friends: new mongoose.Types.ObjectId(friendId) } },
+        );
+
+        await this.userModel.updateOne(
+            { _id: new mongoose.Types.ObjectId(friendId) },
+            { $pull: { friends: new mongoose.Types.ObjectId(userId) } },
+        );
     }
 }

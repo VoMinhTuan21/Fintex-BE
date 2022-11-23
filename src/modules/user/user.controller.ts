@@ -1,6 +1,7 @@
 import {
     Body,
     Controller,
+    Delete,
     Get,
     Param,
     Post,
@@ -25,6 +26,7 @@ import {
 } from '../../dto/request/user.dto';
 import { EditUserDto } from '../../dto/request/user.dto';
 import { ValidateMongoId } from '../../utils/validate-pipe';
+import { DELETE_FRIEND_REQ_SUCCESS } from '../../constances/friendReqResponseMessage';
 
 @ApiTags('User')
 @Controller('user')

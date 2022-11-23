@@ -29,7 +29,7 @@ export class NotificationService {
         try {
             const fromUser = await this.userService.getSimpleInfo(body.fromId);
 
-            if (['createFriendReq', 'acceptFriendReq'].includes(body.type)) {
+            if (['createFriendReq', 'acceptFriendReq', 'deleteFriend'].includes(body.type)) {
                 const subContent = handleFriendReqNotiContent(body.type);
 
                 const noti = await this.notiModel.create({
