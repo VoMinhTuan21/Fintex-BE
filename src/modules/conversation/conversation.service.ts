@@ -13,7 +13,7 @@ import {
 import { CreateConversationDto } from '../../dto/request/conversation.dto';
 import { handleResponse } from '../../dto/response';
 import { ConversationResDto } from '../../dto/response/conversation.dto';
-import { User } from '../../schemas';
+import { User, UserDocument } from '../../schemas';
 import { Conversation, ConversationDocument } from '../../schemas/conversation.schema';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 
@@ -24,7 +24,7 @@ export class ConversationService {
         private readonly cloudinaryService: CloudinaryService,
     ) {}
 
-    async create(users: string[]) {
+    async create(users: string[], name: string, userId: string) {
         const uniqueUsersId = [];
         users.forEach((element) => {
             if (!uniqueUsersId.includes(element)) {
@@ -60,11 +60,16 @@ export class ConversationService {
 
             const conv = await this.conversationModel.create({
                 participants: users,
+                name,
             });
 
             const conversation = await this.conversationModel
-                .findById(conv._id, 'participants messages')
+                .findById(conv._id, 'participants messages name')
                 .populate('participants', 'name avatar');
+
+            conversation.participants = (conversation.participants as UserDocument[]).filter(
+                (pt) => pt._id.toString() !== userId,
+            );
 
             for (let i = 0; i < conversation.participants.length; i++) {
                 const person = conversation.participants[i] as User;

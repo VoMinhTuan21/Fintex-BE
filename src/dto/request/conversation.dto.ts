@@ -7,6 +7,7 @@ import {
     IsNotEmpty,
     IsNumberString,
     IsOptional,
+    IsString,
     ValidateNested,
 } from 'class-validator';
 
@@ -32,4 +33,9 @@ export class CreateConversationDto {
     @ValidateNested({ each: true })
     @Type(() => UserConv)
     users: UserConv[];
+
+    @ApiProperty({ type: String })
+    @IsOptional()
+    @IsString()
+    name?: string;
 }

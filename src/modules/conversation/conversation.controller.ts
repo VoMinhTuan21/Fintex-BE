@@ -16,7 +16,8 @@ export class ConversationController {
     create(@Body() dto: CreateConversationDto, @Req() req: Request) {
         const users = dto.users.map((item) => item.id);
         users.push((req.user as IJWTInfo)._id);
-        return this.conversationService.create(users);
+        const userId = (req.user as IJWTInfo)._id;
+        return this.conversationService.create(users, dto.name, userId);
     }
 
     @Get()
