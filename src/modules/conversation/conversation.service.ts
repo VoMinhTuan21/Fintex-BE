@@ -9,6 +9,10 @@ import {
     GET_CONVERSATIONS_SUCCESSFULLY,
     ERROR_GET_CONVERSATIONS,
     ERROR_FIND_ONE_CONVERSATION,
+    ERROR_NOT_FOUND_CONVERSATION,
+    ERROR_NOT_IS_CONV_ADMIN,
+    ERROR_USER_NOT_IN_CONV,
+    REMOVE_MEMBER_SUCCESSFULLY,
 } from '../../constances/conversationResponseMessage';
 import { CreateConversationDto } from '../../dto/request/conversation.dto';
 import { handleResponse } from '../../dto/response';
@@ -180,6 +184,51 @@ export class ConversationService {
             return handleResponse({
                 error: ERROR_GET_CONVERSATIONS,
                 statusCode: HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async removeMember(conversationId: string, userId: string, memberId: string) {
+        try {
+            const conv = await this.conversationModel.findById(conversationId);
+            if (!conv) {
+                return handleResponse({
+                    error: ERROR_NOT_FOUND_CONVERSATION,
+                    statusCode: HttpStatus.NOT_FOUND,
+                });
+            }
+
+            if (conv.admin.toString() !== userId) {
+                return handleResponse({
+                    error: ERROR_NOT_IS_CONV_ADMIN,
+                    statusCode: HttpStatus.BAD_REQUEST,
+                });
+            }
+
+            const indexMember = conv.participants.findIndex((item: any) => item.toString() === memberId);
+            if (indexMember === -1) {
+                return handleResponse({
+                    error: ERROR_USER_NOT_IN_CONV,
+                    statusCode: HttpStatus.NOT_FOUND,
+                });
+            }
+
+            conv.participants.splice(indexMember, 1);
+
+            conv.save();
+
+            return handleResponse({
+                message: REMOVE_MEMBER_SUCCESSFULLY,
+                data: {
+                    conversationId,
+                    memberId,
+                },
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: error.response?.error || ERROR_CREATE_CONVERSATION,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
             });
         }
     }
