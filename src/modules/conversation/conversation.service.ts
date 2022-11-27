@@ -61,10 +61,11 @@ export class ConversationService {
             const conv = await this.conversationModel.create({
                 participants: users,
                 name,
+                admin: users.length > 2 ? userId : undefined,
             });
 
             const conversation = await this.conversationModel
-                .findById(conv._id, 'participants messages name')
+                .findById(conv._id, 'participants messages name admin')
                 .populate('participants', 'name avatar');
 
             conversation.participants = (conversation.participants as UserDocument[]).filter(
@@ -120,8 +121,9 @@ export class ConversationService {
     async get(userId: string) {
         try {
             const conversations = (await this.conversationModel
-                .find({ participants: userId }, { _id: 1, participants: 1, name: 1, messages: { $slice: 1 } })
+                .find({ participants: userId }, { _id: 1, participants: 1, name: 1, admin: 1, messages: { $slice: 1 } })
                 .populate('participants', { _id: 1, name: 1, avatar: 1 })
+                .populate('admin', { _id: 1, name: 1, avatar: 1 })
                 .populate([
                     {
                         path: 'messages',
@@ -151,6 +153,10 @@ export class ConversationService {
 
                 for (const person of conv.participants) {
                     person.avatar = await this.cloudinaryService.getImageUrl(person.avatar);
+                }
+
+                if (conv.admin) {
+                    conv.admin.avatar = await this.cloudinaryService.getImageUrl(conv.admin.avatar);
                 }
 
                 if (conv.messages.length > 0) {

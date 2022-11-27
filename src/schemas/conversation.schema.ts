@@ -29,6 +29,9 @@ export class Conversation {
 
     @Prop({ type: String, required: false })
     name: string;
+
+    @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: false })
+    admin: UserDocument | string;
 }
 
 export const ConversationSchema = SchemaFactory.createForClass(Conversation);

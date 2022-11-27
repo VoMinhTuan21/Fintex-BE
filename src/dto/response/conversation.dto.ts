@@ -20,4 +20,6 @@ export class ConversationResDto {
         }[];
         updatedAt: string;
     }[];
+    name?: string;
+    admin?: ParticipantResDto;
 }
