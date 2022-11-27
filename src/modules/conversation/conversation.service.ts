@@ -1,6 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
+import { ERROR_NOT_HAVE_PERMISSION } from '../../constances';
 import {
     ERROR_EXISTED_CONVERSATION,
     CREATE_CONVERSATION_SUCCESSFULLY,
@@ -8,13 +9,16 @@ import {
     ERROR_ADD_MESSAGE_TO_CONVERSATION,
     GET_CONVERSATIONS_SUCCESSFULLY,
     ERROR_GET_CONVERSATIONS,
-    ERROR_FIND_ONE_CONVERSATION,
+    ERROR_RENAME_CONVERSATION,
+    ERROR_NEW_AMIN_NOT_IN_CONVERSATION,
+    ERROR_SWITCH_ADMIN,
     ERROR_NOT_FOUND_CONVERSATION,
     ERROR_NOT_IS_CONV_ADMIN,
     ERROR_USER_NOT_IN_CONV,
     REMOVE_MEMBER_SUCCESSFULLY,
+    RENAME_CONVERSATION_SUCCESSFULLY,
+    SWITCH_ADMIN_SUCCESSFULLY,
 } from '../../constances/conversationResponseMessage';
-import { CreateConversationDto } from '../../dto/request/conversation.dto';
 import { handleResponse } from '../../dto/response';
 import { ConversationResDto } from '../../dto/response/conversation.dto';
 import { User, UserDocument } from '../../schemas';
@@ -184,6 +188,53 @@ export class ConversationService {
             return handleResponse({
                 error: ERROR_GET_CONVERSATIONS,
                 statusCode: HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async rename(conversationId: string, name: string) {
+        try {
+            await this.conversationModel.findByIdAndUpdate(conversationId, { name: name });
+            return handleResponse({
+                message: RENAME_CONVERSATION_SUCCESSFULLY,
+            });
+        } catch (error) {
+            return handleResponse({
+                error: ERROR_RENAME_CONVERSATION,
+                statusCode: HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async switchAdmin(conversationId: string, newAdmin: string, oldAdmin: string) {
+        try {
+            const conv = await this.conversationModel.findById(conversationId);
+
+            if (conv.admin.toString() !== oldAdmin) {
+                return handleResponse({
+                    error: ERROR_NOT_HAVE_PERMISSION,
+                    statusCode: HttpStatus.BAD_REQUEST,
+                });
+            }
+
+            if (!conv.participants.map((item: any) => item.toString()).includes(newAdmin)) {
+                return handleResponse({
+                    error: ERROR_NEW_AMIN_NOT_IN_CONVERSATION,
+                    statusCode: HttpStatus.NOT_ACCEPTABLE,
+                });
+            }
+
+            conv.admin = newAdmin;
+            await conv.save();
+
+            return handleResponse({
+                message: SWITCH_ADMIN_SUCCESSFULLY,
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: error.response?.error || ERROR_SWITCH_ADMIN,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
             });
         }
     }

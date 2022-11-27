@@ -1,6 +1,6 @@
-import { Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { CreateConversationDto } from '../../dto/request/conversation.dto';
+import { CreateConversationDto, SwitchAdmin } from '../../dto/request/conversation.dto';
 import { JwtGuard } from '../../guards/jwt.guard';
 import { ConversationService } from './conversation.service';
 import { Request } from 'express';
@@ -25,5 +25,12 @@ export class ConversationController {
     @UseGuards(JwtGuard)
     get(@Req() req: Request) {
         return this.conversationService.get((req.user as IJWTInfo)._id);
+    }
+
+    @Delete(':conversationId/member/:memberId')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    removeMember(@Req() req: Request, @Body() dto: SwitchAdmin) {
+        return this.conversationService.removeMember(dto.conversationId, (req.user as IJWTInfo)._id, dto.newAdmin);
     }
 }

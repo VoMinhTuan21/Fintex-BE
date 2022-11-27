@@ -39,3 +39,27 @@ export class CreateConversationDto {
     @IsString()
     name?: string;
 }
+
+export class RenameConversationDto {
+    @ApiProperty({ type: String })
+    @IsNotEmpty()
+    @IsMongoId()
+    conversationId: string;
+
+    @ApiProperty({ type: String })
+    @IsNotEmpty()
+    @IsString()
+    name: string;
+}
+
+export class SwitchAdmin {
+    @ApiProperty({ type: String })
+    @IsNotEmpty()
+    @IsMongoId()
+    conversationId: string;
+
+    @ApiProperty({ type: String })
+    @IsNotEmpty()
+    @IsMongoId()
+    newAdmin: string;
+}
