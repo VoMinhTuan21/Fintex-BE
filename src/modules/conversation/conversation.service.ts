@@ -1,7 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
-import { ERROR_NOT_HAVE_PERMISSION } from '../../constances';
+import { ERROR_NOT_HAVE_PERMISSION, ERROR_USER_NOT_FOUND } from '../../constances';
 import {
     ERROR_EXISTED_CONVERSATION,
     CREATE_CONVERSATION_SUCCESSFULLY,
@@ -18,18 +18,21 @@ import {
     REMOVE_MEMBER_SUCCESSFULLY,
     RENAME_CONVERSATION_SUCCESSFULLY,
     SWITCH_ADMIN_SUCCESSFULLY,
+    ERROR_CANNOT_REMOVE_MYSEFF,
 } from '../../constances/conversationResponseMessage';
 import { handleResponse } from '../../dto/response';
 import { ConversationResDto } from '../../dto/response/conversation.dto';
 import { User, UserDocument } from '../../schemas';
 import { Conversation, ConversationDocument } from '../../schemas/conversation.schema';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { UserService } from '../user/user.service';
 
 @Injectable()
 export class ConversationService {
     constructor(
         @InjectModel(Conversation.name) private readonly conversationModel: Model<ConversationDocument>,
         private readonly cloudinaryService: CloudinaryService,
+        private readonly userService: UserService,
     ) {}
 
     async create(users: string[], name: string, userId: string) {
@@ -192,8 +195,16 @@ export class ConversationService {
         }
     }
 
-    async rename(conversationId: string, name: string) {
+    async rename(conversationId: string, name: string, userId: string) {
         try {
+            const conv = await this.conversationModel.findById(conversationId);
+            if (conv.admin.toString() !== userId) {
+                return handleResponse({
+                    error: ERROR_NOT_IS_CONV_ADMIN,
+                    statusCode: HttpStatus.CONFLICT,
+                });
+            }
+
             await this.conversationModel.findByIdAndUpdate(conversationId, { name: name });
             return handleResponse({
                 message: RENAME_CONVERSATION_SUCCESSFULLY,
@@ -209,6 +220,14 @@ export class ConversationService {
     async switchAdmin(conversationId: string, newAdmin: string, oldAdmin: string) {
         try {
             const conv = await this.conversationModel.findById(conversationId);
+            const user = await this.userService.findById(newAdmin);
+
+            if (!user) {
+                return handleResponse({
+                    error: ERROR_USER_NOT_FOUND,
+                    statusCode: HttpStatus.BAD_REQUEST,
+                });
+            }
 
             if (conv.admin.toString() !== oldAdmin) {
                 return handleResponse({
@@ -229,6 +248,14 @@ export class ConversationService {
 
             return handleResponse({
                 message: SWITCH_ADMIN_SUCCESSFULLY,
+                data: {
+                    conversationId,
+                    newAdmin: {
+                        _id: user._id,
+                        name: user.name,
+                        avatar: await this.cloudinaryService.getImageUrl(user.avatar),
+                    },
+                },
             });
         } catch (error) {
             console.log('error: ', error);
@@ -241,6 +268,13 @@ export class ConversationService {
 
     async removeMember(conversationId: string, userId: string, memberId: string) {
         try {
+            if (memberId === userId) {
+                return handleResponse({
+                    error: ERROR_CANNOT_REMOVE_MYSEFF,
+                    statusCode: HttpStatus.CONFLICT,
+                });
+            }
+
             const conv = await this.conversationModel.findById(conversationId);
             if (!conv) {
                 return handleResponse({

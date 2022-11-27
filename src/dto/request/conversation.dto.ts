@@ -61,5 +61,5 @@ export class SwitchAdmin {
     @ApiProperty({ type: String })
     @IsNotEmpty()
     @IsMongoId()
-    newAdmin: string;
+    member: string;
 }

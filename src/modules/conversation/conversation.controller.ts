@@ -1,6 +1,6 @@
-import { Body, Controller, Delete, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { CreateConversationDto, SwitchAdmin } from '../../dto/request/conversation.dto';
+import { CreateConversationDto, RenameConversationDto, SwitchAdmin } from '../../dto/request/conversation.dto';
 import { JwtGuard } from '../../guards/jwt.guard';
 import { ConversationService } from './conversation.service';
 import { Request } from 'express';
@@ -27,10 +27,28 @@ export class ConversationController {
         return this.conversationService.get((req.user as IJWTInfo)._id);
     }
 
+    @Put('rename-conversation')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    renameConversation(@Body() dto: RenameConversationDto, @Req() req: Request) {
+        return this.conversationService.rename(dto.conversationId, dto.name, (req.user as IJWTInfo)._id);
+    }
+
+    @Put('switch-admin')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    switchAdmin(@Body() dto: SwitchAdmin, @Req() req: Request) {
+        return this.conversationService.switchAdmin(dto.conversationId, dto.member, (req.user as IJWTInfo)._id);
+    }
+
     @Delete(':conversationId/member/:memberId')
     @ApiBearerAuth('access_token')
     @UseGuards(JwtGuard)
-    removeMember(@Req() req: Request, @Body() dto: SwitchAdmin) {
-        return this.conversationService.removeMember(dto.conversationId, (req.user as IJWTInfo)._id, dto.newAdmin);
+    removeMember(
+        @Req() req: Request,
+        @Param('conversationId') conversationId: string,
+        @Param('memberId') memberId: string,
+    ) {
+        return this.conversationService.removeMember(conversationId, (req.user as IJWTInfo)._id, memberId);
     }
 }
