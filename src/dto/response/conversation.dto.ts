@@ -11,6 +11,7 @@ export class ParticipantResDto {
 export class ConversationResDto {
     _id: string;
     participants: ParticipantResDto[];
+    removedMember: ParticipantResDto[];
     messages: {
         _id: string;
         message: {
