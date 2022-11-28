@@ -52,7 +52,7 @@ export class RenameConversationDto {
     name: string;
 }
 
-export class SwitchAdmin {
+export class EditConversationDto {
     @ApiProperty({ type: String })
     @IsNotEmpty()
     @IsMongoId()
@@ -61,5 +61,5 @@ export class SwitchAdmin {
     @ApiProperty({ type: String })
     @IsNotEmpty()
     @IsMongoId()
-    newAdmin: string;
+    member: string;
 }

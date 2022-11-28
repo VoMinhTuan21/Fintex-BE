@@ -1,7 +1,7 @@
 import { forwardRef, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
-import { ERROR_NOT_HAVE_PERMISSION } from '../../constances';
+import { ERROR_NOT_HAVE_PERMISSION, ERROR_USER_NOT_FOUND, USER_NOT_EXISTED } from '../../constances';
 import {
     ERROR_EXISTED_CONVERSATION,
     CREATE_CONVERSATION_SUCCESSFULLY,
@@ -10,9 +10,13 @@ import {
     GET_CONVERSATIONS_SUCCESSFULLY,
     ERROR_GET_CONVERSATIONS,
     ERROR_RENAME_CONVERSATION,
-    RENAME_CONVERSATION_SUCCESSFULLY,
     ERROR_NEW_AMIN_NOT_IN_CONVERSATION,
     ERROR_SWITCH_ADMIN,
+    ERROR_NOT_FOUND_CONVERSATION,
+    ERROR_NOT_IS_CONV_ADMIN,
+    ERROR_USER_NOT_IN_CONV,
+    REMOVE_MEMBER_SUCCESSFULLY,
+    RENAME_CONVERSATION_SUCCESSFULLY,
     SWITCH_ADMIN_SUCCESSFULLY,
     LEAVE_CONVERSATION_SUCCESSFULLY,
     ERROR_LEAVE_CONVERSATION,
@@ -20,6 +24,8 @@ import {
     ERROR_ADMIN_NOT_ALLOW_TO_LEAVE,
     ERROR_ADD_MEMBER_TO_CONVERSATION,
     ADD_MEMBER_SUCCESSFULLY,
+    ERROR_CANNOT_REMOVE_MYSEFF,
+    ERROR_USER_ALREADY_IN_CONVERSATION,
 } from '../../constances/conversationResponseMessage';
 import { handleResponse } from '../../dto/response';
 import { ConversationResDto } from '../../dto/response/conversation.dto';
@@ -27,6 +33,7 @@ import { User, UserDocument } from '../../schemas';
 import { Conversation, ConversationDocument } from '../../schemas/conversation.schema';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { MessageService } from '../message/message.service';
+import { MqttService } from '../mqtt/mqtt.service';
 import { UserService } from '../user/user.service';
 
 @Injectable()
@@ -36,6 +43,7 @@ export class ConversationService {
         private readonly cloudinaryService: CloudinaryService,
         private readonly userService: UserService,
         @Inject(forwardRef(() => MessageService)) private messageService: MessageService,
+        private readonly mqttService: MqttService,
     ) {}
 
     async create(users: string[], name: string, userId: string) {
@@ -198,8 +206,16 @@ export class ConversationService {
         }
     }
 
-    async rename(conversationId: string, name: string) {
+    async rename(conversationId: string, name: string, userId: string) {
         try {
+            const conv = await this.conversationModel.findById(conversationId);
+            if (conv.admin.toString() !== userId) {
+                return handleResponse({
+                    error: ERROR_NOT_IS_CONV_ADMIN,
+                    statusCode: HttpStatus.CONFLICT,
+                });
+            }
+
             await this.conversationModel.findByIdAndUpdate(conversationId, { name: name });
             return handleResponse({
                 message: RENAME_CONVERSATION_SUCCESSFULLY,
@@ -215,6 +231,14 @@ export class ConversationService {
     async switchAdmin(conversationId: string, newAdmin: string, oldAdmin: string) {
         try {
             const conv = await this.conversationModel.findById(conversationId);
+            const user = await this.userService.findById(newAdmin);
+
+            if (!user) {
+                return handleResponse({
+                    error: ERROR_USER_NOT_FOUND,
+                    statusCode: HttpStatus.BAD_REQUEST,
+                });
+            }
 
             if (conv.admin.toString() !== oldAdmin) {
                 return handleResponse({
@@ -235,6 +259,14 @@ export class ConversationService {
 
             return handleResponse({
                 message: SWITCH_ADMIN_SUCCESSFULLY,
+                data: {
+                    conversationId,
+                    newAdmin: {
+                        _id: user._id,
+                        name: user.name,
+                        avatar: await this.cloudinaryService.getImageUrl(user.avatar),
+                    },
+                },
             });
         } catch (error) {
             console.log('error: ', error);
@@ -245,11 +277,64 @@ export class ConversationService {
         }
     }
 
+    async removeMember(conversationId: string, userId: string, memberId: string) {
+        try {
+            if (memberId === userId) {
+                return handleResponse({
+                    error: ERROR_CANNOT_REMOVE_MYSEFF,
+                    statusCode: HttpStatus.CONFLICT,
+                });
+            }
+
+            const conv = await this.conversationModel.findById(conversationId);
+            if (!conv) {
+                return handleResponse({
+                    error: ERROR_NOT_FOUND_CONVERSATION,
+                    statusCode: HttpStatus.NOT_FOUND,
+                });
+            }
+
+            if (conv.admin.toString() !== userId) {
+                return handleResponse({
+                    error: ERROR_NOT_IS_CONV_ADMIN,
+                    statusCode: HttpStatus.BAD_REQUEST,
+                });
+            }
+
+            const indexMember = conv.participants.findIndex((item: any) => item.toString() === memberId);
+            if (indexMember === -1) {
+                return handleResponse({
+                    error: ERROR_USER_NOT_IN_CONV,
+                    statusCode: HttpStatus.NOT_FOUND,
+                });
+            }
+
+            conv.participants.splice(indexMember, 1);
+
+            conv.save();
+
+            return handleResponse({
+                message: REMOVE_MEMBER_SUCCESSFULLY,
+                data: {
+                    conversationId,
+                    memberId,
+                },
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: error.response?.error || ERROR_CREATE_CONVERSATION,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
     async leaveGroupChat(conversationId: string, userId: string) {
         try {
             const conv = await this.conversationModel.findById(conversationId);
+            let participants = conv.participants.map((item: any) => item.toString()) as string[];
 
-            if (!conv.participants.map((item: any) => item.toString()).includes(userId)) {
+            if (!participants.includes(userId)) {
                 return handleResponse({
                     error: ERROR_USER_NOT_IN_CONVERSATION,
                     statusCode: HttpStatus.NOT_ACCEPTABLE,
@@ -267,8 +352,23 @@ export class ConversationService {
                 $pull: { participants: new mongoose.Types.ObjectId(userId) },
             });
 
+            const systemMessage = await this.messageService.createSystemMessage(conversationId, 'đã rời nhóm', userId);
+
+            const data = {
+                conversationId,
+                member: userId,
+                message: systemMessage,
+            };
+
+            participants = participants.filter((item) => item !== userId);
+
+            this.mqttService.sendMessageNotify(participants, data);
+
             return handleResponse({
                 message: LEAVE_CONVERSATION_SUCCESSFULLY,
+                data: {
+                    conversationId,
+                },
             });
         } catch (error) {
             console.log('error: ', error);
@@ -281,33 +381,54 @@ export class ConversationService {
 
     async addMember(conversationId: string, member: string) {
         try {
+            const user = await this.userService.findById(member);
+            if (!user) {
+                return handleResponse({
+                    error: USER_NOT_EXISTED,
+                    statusCode: HttpStatus.BAD_REQUEST,
+                });
+            }
+
+            const conv = await this.conversationModel.findById(conversationId);
+            const participants = conv.participants.map((item: any) => item.toString()) as string[];
+
+            if (participants.includes(member)) {
+                return handleResponse({
+                    error: ERROR_USER_ALREADY_IN_CONVERSATION,
+                    statusCode: HttpStatus.NOT_ACCEPTABLE,
+                });
+            }
+
             await this.conversationModel.findByIdAndUpdate(conversationId, {
                 $push: { participants: new mongoose.Types.ObjectId(member) },
             });
 
-            const user = await this.userService.findById(member);
-
             const systemMessage = await this.messageService.createSystemMessage(
-                `${user.name.fullName} đã tham gia nhóm`,
+                conversationId,
+                'đã tham gia nhóm',
                 member,
             );
 
+            const data = {
+                conversationId,
+                member: {
+                    _id: user._id,
+                    name: user.name,
+                    avatar: await this.cloudinaryService.getImageUrl(user.avatar),
+                },
+                message: systemMessage,
+            };
+
+            this.mqttService.sendMessageNotify(participants, data);
+
             return handleResponse({
                 message: ADD_MEMBER_SUCCESSFULLY,
-                data: {
-                    conversationId,
-                    member: {
-                        _id: user._id,
-                        name: user.name,
-                        avatar: await this.cloudinaryService.getImageUrl(user.avatar),
-                    },
-                    message: systemMessage,
-                },
+                data,
             });
         } catch (error) {
             return handleResponse({
-                error: ERROR_ADD_MEMBER_TO_CONVERSATION,
-                statusCode: HttpStatus.BAD_REQUEST,
+                error: error.response?.error || ERROR_ADD_MEMBER_TO_CONVERSATION,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
             });
         }
     }

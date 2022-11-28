@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Conversation, ConversationSchema } from '../../schemas/conversation.schema';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 import { MessageModule } from '../message/message.module';
+import { MqttModule } from '../mqtt/mqtt.module';
 import { UserModule } from '../user/user.module';
 import { ConversationController } from './conversation.controller';
 import { ConversationService } from './conversation.service';
@@ -12,6 +13,7 @@ import { ConversationService } from './conversation.service';
         MongooseModule.forFeature([{ name: Conversation.name, schema: ConversationSchema }]),
         CloudinaryModule,
         UserModule,
+        MqttModule,
         forwardRef(() => MessageModule),
     ],
     controllers: [ConversationController],

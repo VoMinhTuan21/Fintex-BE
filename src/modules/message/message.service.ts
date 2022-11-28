@@ -361,13 +361,15 @@ export class MessageService {
         }
     }
 
-    async createSystemMessage(content: string, senderId: string) {
+    async createSystemMessage(conversationId: string, content: string, senderId: string) {
         try {
             const subMess = await this.subMessService.create('notify', content);
             const message = await this.messageModel.create({
                 sender: senderId,
                 message: [subMess.data._id],
             });
+
+            await this.conversationService.addMessage(conversationId, message._id);
 
             return {
                 _id: message._id,

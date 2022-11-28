@@ -16,4 +16,10 @@ export class MqttService {
             this.client.emit(`${userId}/chat/seen-message`, JSON.stringify(message));
         }
     }
+
+    sendMessageNotify(userIds: string[], message: any) {
+        for (const userId of userIds) {
+            this.client.emit(`${userId}/chat/system-message`, JSON.stringify(message));
+        }
+    }
 }
