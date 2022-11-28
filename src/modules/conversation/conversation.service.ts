@@ -32,8 +32,10 @@ import { ConversationResDto } from '../../dto/response/conversation.dto';
 import { User, UserDocument } from '../../schemas';
 import { Conversation, ConversationDocument } from '../../schemas/conversation.schema';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { EventsGateway } from '../event/event.gateway';
 import { MessageService } from '../message/message.service';
 import { MqttService } from '../mqtt/mqtt.service';
+import { NotificationService } from '../notification/notification.service';
 import { UserService } from '../user/user.service';
 
 @Injectable()
@@ -44,6 +46,8 @@ export class ConversationService {
         private readonly userService: UserService,
         @Inject(forwardRef(() => MessageService)) private messageService: MessageService,
         private readonly mqttService: MqttService,
+        private readonly notificationService: NotificationService,
+        private readonly eventGateway: EventsGateway,
     ) {}
 
     async create(users: string[], name: string, userId: string) {
@@ -407,7 +411,7 @@ export class ConversationService {
         }
     }
 
-    async addMember(conversationId: string, member: string) {
+    async addMember(conversationId: string, member: string, userId: string) {
         try {
             const user = await this.userService.findById(member);
             if (!user) {
@@ -437,6 +441,16 @@ export class ConversationService {
                 member,
             );
 
+            const noti = await this.notificationService.create({
+                fromId: userId,
+                toId: member,
+                type: 'addMemberConv',
+                conversationId: conversationId,
+                conversationName: conv.name,
+            });
+
+            this.eventGateway.sendNotify(noti.data, member);
+
             const data = {
                 conversationId,
                 member: {
@@ -447,7 +461,10 @@ export class ConversationService {
                 message: systemMessage,
             };
 
-            this.mqttService.sendMessageNotify(participants, data);
+            this.mqttService.sendMessageNotify(
+                participants.filter((item) => item !== userId),
+                data,
+            );
 
             return handleResponse({
                 message: ADD_MEMBER_SUCCESSFULLY,
