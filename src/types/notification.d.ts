@@ -4,4 +4,6 @@ declare interface ICreateNoti {
     toId: string;
     postId?: string;
     postPersonId?: string;
+    conversationId?: string;
+    conversationName?: string;
 }

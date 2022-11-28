@@ -62,7 +62,7 @@ export class ConversationController {
     @Put('add-member')
     @ApiBearerAuth('access_token')
     @UseGuards(JwtGuard)
-    addMember(@Body() dto: EditConversationDto) {
-        return this.conversationService.addMember(dto.conversationId, dto.member);
+    addMember(@Body() dto: EditConversationDto, @Req() req: Request) {
+        return this.conversationService.addMember(dto.conversationId, dto.member, (req.user as IJWTInfo)._id);
     }
 }

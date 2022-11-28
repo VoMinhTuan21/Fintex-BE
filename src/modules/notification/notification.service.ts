@@ -13,7 +13,7 @@ import {
 } from '../../constances/notiResponseMessage';
 import { handleResponse } from '../../dto/response';
 import { NotificationDocument, Notification } from '../../schemas/notification.schema';
-import { handleFriendReqNotiContent, handlePostNotiContent } from '../../utils/notification';
+import { handleConvNotiContent, handleFriendReqNotiContent, handlePostNotiContent } from '../../utils/notification';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { UserService } from '../user/user.service';
 
@@ -75,6 +75,29 @@ export class NotificationService {
                         to: noti.to,
                         isSeen: noti.isSeen,
                         createdAt: new Date().toISOString(),
+                    },
+                });
+            } else if (['addMemberConv'].includes(body.type)) {
+                const subContent = handleConvNotiContent(body.type, body.conversationName);
+
+                const noti = await this.notiModel.create({
+                    from: body.fromId,
+                    to: body.toId,
+                    content: `${fromUser.name.fullName} ${subContent}`,
+                    conversationId: body.conversationId,
+                    type: body.type,
+                });
+
+                return handleResponse({
+                    message: CREATE_NOTI_SUCCESS,
+                    data: {
+                        _id: noti._id,
+                        type: noti.type,
+                        content: noti.content,
+                        from: fromUser,
+                        isSeen: noti.isSeen,
+                        createdAt: new Date().toISOString(),
+                        conversationId: noti.conversationId,
                     },
                 });
             }

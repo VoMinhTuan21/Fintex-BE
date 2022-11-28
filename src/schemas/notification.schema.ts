@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import mongoose, { Document } from 'mongoose';
+import { ConversationDocument } from './conversation.schema';
 import { PostDocument } from './post.schema';
 import { UserDocument } from './user.schema';
 
@@ -34,6 +35,12 @@ export class Notification {
         ref: 'Post',
     })
     postId: PostDocument | string;
+
+    @Prop({
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Conversation',
+    })
+    conversationId: ConversationDocument | string;
 
     @Prop({
         type: mongoose.Schema.Types.ObjectId,

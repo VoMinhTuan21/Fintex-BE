@@ -27,3 +27,12 @@ export const handleFriendReqNotiContent = (type: string) => {
             return null;
     }
 };
+
+export const handleConvNotiContent = (type: string, convName) => {
+    switch (type) {
+        case 'addMemberConv':
+            return 'đã mời tham gia nhóm chat ' + convName;
+        default:
+            break;
+    }
+};
