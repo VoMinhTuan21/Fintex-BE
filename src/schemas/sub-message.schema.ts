@@ -14,8 +14,8 @@ export class SubMessage {
     @Prop([{ type: String, required: false }])
     images: string[];
 
-    @Prop({ type: String, enum: ['text', 'image'] })
-    messType: 'text' | 'image';
+    @Prop({ type: String, enum: ['text', 'image', 'notify'] })
+    messType: 'text' | 'image' | 'notify';
 
     @Prop([
         {

@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { forwardRef, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
 import {
@@ -29,7 +29,7 @@ export class MessageService {
     constructor(
         @InjectModel(Message.name) private readonly messageModel: Model<MessageDocument>,
         private readonly cloudinaryService: CloudinaryService,
-        private readonly conversationService: ConversationService,
+        @Inject(forwardRef(() => ConversationService)) private conversationService: ConversationService,
         private readonly mqttService: MqttService,
         private readonly subMessService: SubMessageService,
     ) {}
@@ -359,5 +359,29 @@ export class MessageService {
                 statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
             });
         }
+    }
+
+    async createSystemMessage(content: string, senderId: string) {
+        try {
+            const subMess = await this.subMessService.create('notify', content);
+            const message = await this.messageModel.create({
+                sender: senderId,
+                message: [subMess.data._id],
+            });
+
+            return {
+                _id: message._id,
+                sender: message.sender,
+                message: [
+                    {
+                        _id: subMess.data._id,
+                        text: subMess.data.text,
+                        seen: [],
+                        messType: 'notify',
+                    },
+                ],
+                updatedAt: message.updatedAt,
+            };
+        } catch (error) {}
     }
 }

@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { forwardRef, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model } from 'mongoose';
 import { ERROR_NOT_HAVE_PERMISSION } from '../../constances';
@@ -14,18 +14,28 @@ import {
     ERROR_NEW_AMIN_NOT_IN_CONVERSATION,
     ERROR_SWITCH_ADMIN,
     SWITCH_ADMIN_SUCCESSFULLY,
+    LEAVE_CONVERSATION_SUCCESSFULLY,
+    ERROR_LEAVE_CONVERSATION,
+    ERROR_USER_NOT_IN_CONVERSATION,
+    ERROR_ADMIN_NOT_ALLOW_TO_LEAVE,
+    ERROR_ADD_MEMBER_TO_CONVERSATION,
+    ADD_MEMBER_SUCCESSFULLY,
 } from '../../constances/conversationResponseMessage';
 import { handleResponse } from '../../dto/response';
 import { ConversationResDto } from '../../dto/response/conversation.dto';
 import { User, UserDocument } from '../../schemas';
 import { Conversation, ConversationDocument } from '../../schemas/conversation.schema';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { MessageService } from '../message/message.service';
+import { UserService } from '../user/user.service';
 
 @Injectable()
 export class ConversationService {
     constructor(
         @InjectModel(Conversation.name) private readonly conversationModel: Model<ConversationDocument>,
         private readonly cloudinaryService: CloudinaryService,
+        private readonly userService: UserService,
+        @Inject(forwardRef(() => MessageService)) private messageService: MessageService,
     ) {}
 
     async create(users: string[], name: string, userId: string) {
@@ -231,6 +241,73 @@ export class ConversationService {
             return handleResponse({
                 error: error.response?.error || ERROR_SWITCH_ADMIN,
                 statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async leaveGroupChat(conversationId: string, userId: string) {
+        try {
+            const conv = await this.conversationModel.findById(conversationId);
+
+            if (!conv.participants.map((item: any) => item.toString()).includes(userId)) {
+                return handleResponse({
+                    error: ERROR_USER_NOT_IN_CONVERSATION,
+                    statusCode: HttpStatus.NOT_ACCEPTABLE,
+                });
+            }
+
+            if (conv.admin.toString() === userId) {
+                return handleResponse({
+                    error: ERROR_ADMIN_NOT_ALLOW_TO_LEAVE,
+                    statusCode: HttpStatus.NOT_ACCEPTABLE,
+                });
+            }
+
+            await this.conversationModel.findByIdAndUpdate(conversationId, {
+                $pull: { participants: new mongoose.Types.ObjectId(userId) },
+            });
+
+            return handleResponse({
+                message: LEAVE_CONVERSATION_SUCCESSFULLY,
+            });
+        } catch (error) {
+            console.log('error: ', error);
+            return handleResponse({
+                error: error.response?.error || ERROR_LEAVE_CONVERSATION,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async addMember(conversationId: string, member: string) {
+        try {
+            await this.conversationModel.findByIdAndUpdate(conversationId, {
+                $push: { participants: new mongoose.Types.ObjectId(member) },
+            });
+
+            const user = await this.userService.findById(member);
+
+            const systemMessage = await this.messageService.createSystemMessage(
+                `${user.name.fullName} đã tham gia nhóm`,
+                member,
+            );
+
+            return handleResponse({
+                message: ADD_MEMBER_SUCCESSFULLY,
+                data: {
+                    conversationId,
+                    member: {
+                        _id: user._id,
+                        name: user.name,
+                        avatar: await this.cloudinaryService.getImageUrl(user.avatar),
+                    },
+                    message: systemMessage,
+                },
+            });
+        } catch (error) {
+            return handleResponse({
+                error: ERROR_ADD_MEMBER_TO_CONVERSATION,
+                statusCode: HttpStatus.BAD_REQUEST,
             });
         }
     }

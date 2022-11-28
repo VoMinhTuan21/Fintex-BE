@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CreateConversationDto, RenameConversationDto, SwitchAdmin } from '../../dto/request/conversation.dto';
 import { JwtGuard } from '../../guards/jwt.guard';
@@ -39,5 +39,12 @@ export class ConversationController {
     @UseGuards(JwtGuard)
     switchAdmin(@Body() dto: SwitchAdmin, @Req() req: Request) {
         return this.conversationService.switchAdmin(dto.conversationId, dto.newAdmin, (req.user as IJWTInfo)._id);
+    }
+
+    @Put('leave-conversation/:id')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    leaveConversation(@Param('id') id: string, @Req() req: Request) {
+        return this.conversationService.leaveGroupChat(id, (req.user as IJWTInfo)._id);
     }
 }
