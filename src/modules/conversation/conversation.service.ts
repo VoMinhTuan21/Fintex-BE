@@ -323,14 +323,21 @@ export class ConversationService {
                 });
             }
 
-            await this.conversationModel.findByIdAndUpdate(conversationId, {
-                $pull: {
-                    participants: new mongoose.Types.ObjectId(memberId),
-                },
-                $push: {
-                    removedMember: new mongoose.Types.ObjectId(memberId),
-                },
-            });
+            const hadLeftBefore = conv.removedMember.findIndex((item: any) => item.toString() === memberId);
+            if (hadLeftBefore > -1) {
+                await this.conversationModel.findByIdAndUpdate(conversationId, {
+                    $pull: { participants: new mongoose.Types.ObjectId(memberId) },
+                });
+            } else {
+                await this.conversationModel.findByIdAndUpdate(conversationId, {
+                    $pull: {
+                        participants: new mongoose.Types.ObjectId(memberId),
+                    },
+                    $push: {
+                        removedMember: new mongoose.Types.ObjectId(memberId),
+                    },
+                });
+            }
 
             const systemMessage = await this.messageService.createSystemMessage(
                 conversationId,
@@ -380,9 +387,19 @@ export class ConversationService {
                 });
             }
 
-            await this.conversationModel.findByIdAndUpdate(conversationId, {
-                $pull: { participants: new mongoose.Types.ObjectId(userId) },
-            });
+            const hadLeftBefore = conv.removedMember.findIndex((item: any) => item.toString() === userId);
+            if (hadLeftBefore > -1) {
+                await this.conversationModel.findByIdAndUpdate(conversationId, {
+                    $pull: { participants: new mongoose.Types.ObjectId(userId) },
+                });
+            } else {
+                await this.conversationModel.findByIdAndUpdate(conversationId, {
+                    $pull: { participants: new mongoose.Types.ObjectId(userId) },
+                    $push: {
+                        removedMember: new mongoose.Types.ObjectId(userId),
+                    },
+                });
+            }
 
             const systemMessage = await this.messageService.createSystemMessage(conversationId, 'đã rời nhóm', userId);
 
