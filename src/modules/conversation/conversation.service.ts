@@ -355,6 +355,16 @@ export class ConversationService {
 
             this.mqttService.sendMessageNotify(participants, data);
 
+            const noti = await this.notificationService.create({
+                fromId: userId,
+                toId: memberId,
+                type: 'removeMemberConv',
+                conversationId: conversationId,
+                conversationName: conv.name,
+            });
+
+            this.eventGateway.sendNotify({ notify: noti.data }, memberId);
+
             return handleResponse({
                 message: REMOVE_MEMBER_SUCCESSFULLY,
                 data,

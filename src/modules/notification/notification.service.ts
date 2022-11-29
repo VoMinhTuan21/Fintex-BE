@@ -77,7 +77,7 @@ export class NotificationService {
                         createdAt: new Date().toISOString(),
                     },
                 });
-            } else if (['addMemberConv'].includes(body.type)) {
+            } else if (['addMemberConv', 'removeMemberConv'].includes(body.type)) {
                 const subContent = handleConvNotiContent(body.type, body.conversationName);
 
                 const noti = await this.notiModel.create({
