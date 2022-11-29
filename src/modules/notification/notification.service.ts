@@ -115,7 +115,17 @@ export class NotificationService {
             const response: any[] = await this.notiModel
                 .find(
                     { to: userId },
-                    { _id: 1, type: 1, content: 1, from: 1, postId: 1, postPersonId: 1, isSeen: 1, createdAt: 1 },
+                    {
+                        _id: 1,
+                        type: 1,
+                        content: 1,
+                        from: 1,
+                        postId: 1,
+                        conversationId: 1,
+                        postPersonId: 1,
+                        isSeen: 1,
+                        createdAt: 1,
+                    },
                 )
                 .sort({ createdAt: -1 })
                 .populate('from', 'name avatar');
