@@ -26,6 +26,7 @@ import {
     ADD_MEMBER_SUCCESSFULLY,
     ERROR_CANNOT_REMOVE_MYSEFF,
     ERROR_USER_ALREADY_IN_CONVERSATION,
+    ERROR_DELETE_CONVERSATION,
 } from '../../constances/conversationResponseMessage';
 import { handleResponse } from '../../dto/response';
 import { ConversationResDto } from '../../dto/response/conversation.dto';
@@ -366,6 +367,10 @@ export class ConversationService {
 
             this.eventGateway.sendNotify({ notify: noti.data }, memberId);
 
+            if (participants.length === 1) {
+                await this.deleteConversation(conversationId);
+            }
+
             return handleResponse({
                 message: REMOVE_MEMBER_SUCCESSFULLY,
                 data,
@@ -428,6 +433,10 @@ export class ConversationService {
             participants = participants.filter((item) => item !== userId);
 
             this.mqttService.sendMessageNotify(participants, data);
+
+            if (participants.length === 1) {
+                await this.deleteConversation(conversationId);
+            }
 
             return handleResponse({
                 message: LEAVE_CONVERSATION_SUCCESSFULLY,
@@ -534,6 +543,22 @@ export class ConversationService {
             return handleResponse({
                 error: error.response?.error || ERROR_ADD_MEMBER_TO_CONVERSATION,
                 statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async deleteConversation(conversationId: string) {
+        try {
+            const conv = await this.conversationModel.findById(conversationId);
+            for (const message of conv.messages as string[]) {
+                await this.messageService.deleteMessage(message);
+            }
+
+            await conv.delete();
+        } catch (error) {
+            return handleResponse({
+                error: error.response?.error || ERROR_DELETE_CONVERSATION,
+                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
             });
         }
     }

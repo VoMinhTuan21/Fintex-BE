@@ -4,6 +4,7 @@ import mongoose, { Model } from 'mongoose';
 import {
     CREATE_SUBMESSAGE_SUCCESS,
     ERROR_CREATE_SUBMESSAGE,
+    ERROR_DELETE_SUBMESSAGE,
     ERROR_SAW_SUBMESSAGE,
 } from '../../constances/subMessResponseMessage';
 import { handleResponse } from '../../dto/response';
@@ -60,6 +61,23 @@ export class SubMessageService {
             return handleResponse({
                 error: ERROR_SAW_SUBMESSAGE,
                 statusCode: HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
+
+    async delete(id: string) {
+        try {
+            const subMess = await this.subMessageModel.findById(id);
+            if (subMess.messType === 'image') {
+                for (const image of subMess.images) {
+                    this.cloudinaryService.deleteImage(image);
+                }
+            }
+            await subMess.delete();
+        } catch (error) {
+            return handleResponse({
+                error: ERROR_DELETE_SUBMESSAGE,
+                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
             });
         }
     }

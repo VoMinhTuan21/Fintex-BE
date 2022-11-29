@@ -14,6 +14,7 @@ import {
     ERROR_USER_NOT_ALLOWED_TO_SEE_MESSAGE,
     SEEN_MESSAGE_SUCCESSFULLY,
     ERROR_SEEN_MESSAGE,
+    ERROR_DELETE_MESSAGE,
 } from '../../constances/messageResponseMessage';
 import { CreateMessageDto } from '../../dto/request/message.dto';
 import { handleResponse } from '../../dto/response';
@@ -385,5 +386,21 @@ export class MessageService {
                 updatedAt: message.updatedAt,
             };
         } catch (error) {}
+    }
+
+    async deleteMessage(messageId: string) {
+        try {
+            const message = await this.messageModel.findById(messageId);
+            for (const subMess of message.message as string[]) {
+                await this.subMessService.delete(subMess);
+            }
+
+            await message.delete();
+        } catch (error) {
+            return handleResponse({
+                error: error.response?.error || ERROR_DELETE_MESSAGE,
+                statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
+            });
+        }
     }
 }
