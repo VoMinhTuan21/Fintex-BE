@@ -1,7 +1,8 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from '../../schemas/user.schema';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
+import { ConversationModule } from '../conversation/conversation.module';
 import { EventModule } from '../event/event.module';
 import { NotificationModule } from '../notification/notification.module';
 import { UserController } from './user.controller';

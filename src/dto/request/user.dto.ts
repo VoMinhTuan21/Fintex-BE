@@ -83,3 +83,9 @@ export class FriendPaginationDto {
     @IsOptional()
     after: string;
 }
+
+export class SuggestMemberDto {
+    @ApiPropertyOptional({ type: [String] })
+    @IsNotEmpty()
+    participants: string[];
+}

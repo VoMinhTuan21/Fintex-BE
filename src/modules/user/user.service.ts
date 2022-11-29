@@ -25,6 +25,8 @@ import {
     SUCCESS_ADD_FRIEND,
     DELETE_FRIEND_SUCCESSULLY,
     ERROR_DELETE_FRIEND,
+    GET_FRIEND_FOR_ADD_MEMBER_GROUP_CHAT_SUCCESSFULLY,
+    ERROR_GET_SUGGEST_MEMBER,
 } from '../../constances';
 import { EditUserDto } from '../../dto/request/user.dto';
 import { User, UserDocument } from '../../schemas/user.schema';
@@ -597,5 +599,23 @@ export class UserService {
             { _id: new mongoose.Types.ObjectId(friendId) },
             { $pull: { friends: new mongoose.Types.ObjectId(userId) } },
         );
+    }
+
+    async getFriendForGroupChat(userId: string, participantIds: string[]) {
+        try {
+            const friends = (await this.userModel.findById(userId, 'friends').populate('friends', '_id, name avatar'))
+                .friends as UserDocument[];
+            const validFriends = friends.filter((item) => !participantIds.includes(item._id.toString()));
+
+            return handleResponse({
+                message: GET_FRIEND_FOR_ADD_MEMBER_GROUP_CHAT_SUCCESSFULLY,
+                data: validFriends,
+            });
+        } catch (error) {
+            return handleResponse({
+                error: ERROR_GET_SUGGEST_MEMBER,
+                statusCode: HttpStatus.BAD_REQUEST,
+            });
+        }
     }
 }

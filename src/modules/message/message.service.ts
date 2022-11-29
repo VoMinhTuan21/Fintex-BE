@@ -18,7 +18,7 @@ import {
 import { CreateMessageDto } from '../../dto/request/message.dto';
 import { handleResponse } from '../../dto/response';
 import { Message, MessageDocument } from '../../schemas/message.schema';
-import { SubMessage, SubMessageDocument } from '../../schemas/sub-message.schema';
+import { SubMessage } from '../../schemas/sub-message.schema';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { ConversationService } from '../conversation/conversation.service';
 import { MqttService } from '../mqtt/mqtt.service';
@@ -29,7 +29,7 @@ export class MessageService {
     constructor(
         @InjectModel(Message.name) private readonly messageModel: Model<MessageDocument>,
         private readonly cloudinaryService: CloudinaryService,
-        @Inject(forwardRef(() => ConversationService)) private conversationService: ConversationService,
+        private conversationService: ConversationService,
         private readonly mqttService: MqttService,
         private readonly subMessService: SubMessageService,
     ) {}

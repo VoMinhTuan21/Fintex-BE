@@ -20,6 +20,7 @@ import { MessageService } from './message.service';
 import { Request } from 'express';
 import { ValidateMongoId } from '../../utils/validate-pipe';
 import { MqttService } from '../mqtt/mqtt.service';
+import { SuggestMemberDto } from '../../dto/request/user.dto';
 
 @ApiTags('Message')
 @Controller('message')

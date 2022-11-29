@@ -23,6 +23,7 @@ import {
     GetStrangerDto,
     FriendPaginationDto,
     UpdateAvatarCoverDto,
+    SuggestMemberDto,
 } from '../../dto/request/user.dto';
 import { EditUserDto } from '../../dto/request/user.dto';
 import { ValidateMongoId } from '../../utils/validate-pipe';
@@ -165,5 +166,12 @@ export class UserController {
         @Query() paginate: FriendPaginationDto,
     ) {
         return this.userService.getFriends(id, parseInt(paginate.limit), paginate.after);
+    }
+
+    @Post('/suggest-member')
+    @ApiBearerAuth('access_token')
+    @UseGuards(JwtGuard)
+    suggestMember(@Req() req: Request, @Body() dto: SuggestMemberDto) {
+        return this.userService.getFriendForGroupChat((req.user as IJWTInfo)._id, dto.participants);
     }
 }
