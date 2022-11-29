@@ -63,3 +63,15 @@ export class EditConversationDto {
     @IsMongoId()
     member: string;
 }
+
+export class AddMemberToConverstionDto {
+    @ApiProperty({ type: String })
+    @IsNotEmpty()
+    @IsMongoId()
+    conversationId: string;
+
+    @ApiProperty({ type: [String] })
+    @IsNotEmpty()
+    @IsMongoId()
+    members: string[];
+}

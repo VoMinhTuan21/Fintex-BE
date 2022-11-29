@@ -477,4 +477,30 @@ export class ConversationService {
             });
         }
     }
+
+    async addMembers(conversationId: string, members: string[], userId: string) {
+        try {
+            const data = {
+                conversationId,
+                members: [],
+                messages: [],
+            };
+
+            for (const member of members) {
+                const result = await this.addMember(conversationId, member, userId);
+                data.members.push(result.data.member);
+                data.messages.unshift(result.data.message);
+            }
+
+            return handleResponse({
+                message: ADD_MEMBER_SUCCESSFULLY,
+                data,
+            });
+        } catch (error) {
+            return handleResponse({
+                error: error.response?.error || ERROR_ADD_MEMBER_TO_CONVERSATION,
+                statusCode: error.response?.statusCode || HttpStatus.BAD_REQUEST,
+            });
+        }
+    }
 }

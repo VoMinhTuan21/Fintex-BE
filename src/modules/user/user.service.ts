@@ -607,6 +607,11 @@ export class UserService {
                 .friends as UserDocument[];
             const validFriends = friends.filter((item) => !participantIds.includes(item._id.toString()));
 
+            for (const friend of validFriends) {
+                const url = await this.cloudinaryService.getImageUrl(friend.avatar);
+                friend.avatar = url;
+            }
+
             return handleResponse({
                 message: GET_FRIEND_FOR_ADD_MEMBER_GROUP_CHAT_SUCCESSFULLY,
                 data: validFriends,

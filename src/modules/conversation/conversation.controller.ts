@@ -1,6 +1,11 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { CreateConversationDto, RenameConversationDto, EditConversationDto } from '../../dto/request/conversation.dto';
+import {
+    CreateConversationDto,
+    RenameConversationDto,
+    EditConversationDto,
+    AddMemberToConverstionDto,
+} from '../../dto/request/conversation.dto';
 import { JwtGuard } from '../../guards/jwt.guard';
 import { ConversationService } from './conversation.service';
 import { Request } from 'express';
@@ -62,7 +67,7 @@ export class ConversationController {
     @Put('add-member')
     @ApiBearerAuth('access_token')
     @UseGuards(JwtGuard)
-    addMember(@Body() dto: EditConversationDto, @Req() req: Request) {
-        return this.conversationService.addMember(dto.conversationId, dto.member, (req.user as IJWTInfo)._id);
+    addMember(@Body() dto: AddMemberToConverstionDto, @Req() req: Request) {
+        return this.conversationService.addMembers(dto.conversationId, dto.members, (req.user as IJWTInfo)._id);
     }
 }
