@@ -147,8 +147,12 @@ export class ConversationService {
     async get(userId: string) {
         try {
             const conversations = (await this.conversationModel
-                .find({ participants: userId }, { _id: 1, participants: 1, name: 1, admin: 1, messages: { $slice: 1 } })
+                .find(
+                    { participants: userId },
+                    { _id: 1, participants: 1, removedMember: 1, name: 1, admin: 1, messages: { $slice: 1 } },
+                )
                 .populate('participants', { _id: 1, name: 1, avatar: 1 })
+                .populate('removedMember', { _id: 1, name: 1, avatar: 1 })
                 .populate('admin', { _id: 1, name: 1, avatar: 1 })
                 .populate([
                     {
@@ -178,6 +182,10 @@ export class ConversationService {
                 conv.participants.splice(indexMe, 1);
 
                 for (const person of conv.participants) {
+                    person.avatar = await this.cloudinaryService.getImageUrl(person.avatar);
+                }
+
+                for (const person of conv.removedMember) {
                     person.avatar = await this.cloudinaryService.getImageUrl(person.avatar);
                 }
 
@@ -291,6 +299,8 @@ export class ConversationService {
             }
 
             const conv = await this.conversationModel.findById(conversationId);
+            let participants = conv.participants.map((item: any) => item.toString()) as string[];
+
             if (!conv) {
                 return handleResponse({
                     error: ERROR_NOT_FOUND_CONVERSATION,
@@ -313,16 +323,34 @@ export class ConversationService {
                 });
             }
 
-            conv.participants.splice(indexMember, 1);
+            await this.conversationModel.findByIdAndUpdate(conversationId, {
+                $pull: {
+                    participants: new mongoose.Types.ObjectId(memberId),
+                },
+                $push: {
+                    removedMember: new mongoose.Types.ObjectId(memberId),
+                },
+            });
 
-            conv.save();
+            const systemMessage = await this.messageService.createSystemMessage(
+                conversationId,
+                'bị buộc rời nhóm',
+                memberId,
+            );
+
+            const data = {
+                conversationId,
+                member: memberId,
+                message: systemMessage,
+            };
+
+            participants = participants.filter((item) => item !== userId);
+
+            this.mqttService.sendMessageNotify(participants, data);
 
             return handleResponse({
                 message: REMOVE_MEMBER_SUCCESSFULLY,
-                data: {
-                    conversationId,
-                    memberId,
-                },
+                data,
             });
         } catch (error) {
             console.log('error: ', error);

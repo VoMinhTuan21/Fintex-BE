@@ -22,6 +22,14 @@ export class Conversation {
     @Prop([
         {
             type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+        },
+    ])
+    removedMember: UserDocument[] | string[];
+
+    @Prop([
+        {
+            type: mongoose.Schema.Types.ObjectId,
             ref: 'Message',
         },
     ])
