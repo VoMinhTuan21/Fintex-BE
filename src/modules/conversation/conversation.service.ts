@@ -343,6 +343,7 @@ export class ConversationService {
                 conversationId,
                 'bị buộc rời nhóm',
                 memberId,
+                userId,
             );
 
             const data = {
@@ -401,7 +402,12 @@ export class ConversationService {
                 });
             }
 
-            const systemMessage = await this.messageService.createSystemMessage(conversationId, 'đã rời nhóm', userId);
+            const systemMessage = await this.messageService.createSystemMessage(
+                conversationId,
+                'đã rời nhóm',
+                userId,
+                userId,
+            );
 
             const data = {
                 conversationId,
@@ -456,6 +462,7 @@ export class ConversationService {
                 conversationId,
                 'đã tham gia nhóm',
                 member,
+                userId,
             );
 
             const noti = await this.notificationService.create({
@@ -466,7 +473,7 @@ export class ConversationService {
                 conversationName: conv.name,
             });
 
-            this.eventGateway.sendNotify(noti.data, member);
+            this.eventGateway.sendNotify({ notify: noti.data }, member);
 
             const data = {
                 conversationId,

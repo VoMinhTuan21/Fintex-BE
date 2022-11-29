@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import {
     CREATE_SUBMESSAGE_SUCCESS,
     ERROR_CREATE_SUBMESSAGE,
@@ -17,12 +17,13 @@ export class SubMessageService {
         private readonly cloudinaryService: CloudinaryService,
     ) {}
 
-    async create(messType: string, text?: string, images?: string[]) {
+    async create(messType: string, text?: string, images?: string[], userId?: string) {
         try {
             const subMess = (await this.subMessageModel.create({
                 text,
                 images,
                 messType,
+                seen: userId ? [new mongoose.Types.ObjectId(userId)] : [],
             })) as SubMessage;
 
             if (messType === 'image') {

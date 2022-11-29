@@ -72,6 +72,5 @@ export class AddMemberToConverstionDto {
 
     @ApiProperty({ type: [String] })
     @IsNotEmpty()
-    @IsMongoId()
     members: string[];
 }
