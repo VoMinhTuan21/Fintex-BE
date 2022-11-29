@@ -361,9 +361,9 @@ export class MessageService {
         }
     }
 
-    async createSystemMessage(conversationId: string, content: string, senderId: string) {
+    async createSystemMessage(conversationId: string, content: string, senderId: string, userId: string) {
         try {
-            const subMess = await this.subMessService.create('notify', content);
+            const subMess = await this.subMessService.create('notify', content, undefined, userId);
             const message = await this.messageModel.create({
                 sender: senderId,
                 message: [subMess.data._id],
@@ -378,7 +378,7 @@ export class MessageService {
                     {
                         _id: subMess.data._id,
                         text: subMess.data.text,
-                        seen: [],
+                        seen: subMess.data.seen,
                         messType: 'notify',
                     },
                 ],
