@@ -93,7 +93,8 @@ export class ConversationService {
 
             const conversation = await this.conversationModel
                 .findById(conv._id, 'participants messages name admin')
-                .populate('participants', 'name avatar');
+                .populate('participants', 'name avatar')
+                .populate('admin', 'name avatar');
 
             conversation.participants = (conversation.participants as UserDocument[]).filter(
                 (pt) => pt._id.toString() !== userId,
@@ -103,6 +104,10 @@ export class ConversationService {
                 const person = conversation.participants[i] as User;
                 person.avatar = await this.cloudinaryService.getImageUrl(person.avatar);
             }
+
+            (conversation.admin as UserDocument).avatar = await this.cloudinaryService.getImageUrl(
+                (conversation.admin as UserDocument).avatar,
+            );
 
             return handleResponse({
                 message: CREATE_CONVERSATION_SUCCESSFULLY,
