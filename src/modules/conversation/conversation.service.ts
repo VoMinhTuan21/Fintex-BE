@@ -96,10 +96,6 @@ export class ConversationService {
                 .populate('participants', 'name avatar')
                 .populate('admin', 'name avatar');
 
-            conversation.participants = (conversation.participants as UserDocument[]).filter(
-                (pt) => pt._id.toString() !== userId,
-            );
-
             for (let i = 0; i < conversation.participants.length; i++) {
                 const person = conversation.participants[i] as User;
                 person.avatar = await this.cloudinaryService.getImageUrl(person.avatar);
@@ -107,6 +103,34 @@ export class ConversationService {
 
             (conversation.admin as UserDocument).avatar = await this.cloudinaryService.getImageUrl(
                 (conversation.admin as UserDocument).avatar,
+            );
+
+            const receivers = users.filter((item) => item !== userId);
+
+            for (const user of receivers) {
+                const notify = await this.notificationService.create({
+                    fromId: userId,
+                    toId: user,
+                    type: 'addMemberConv',
+                    conversationId: conv._id,
+                    conversationName: name,
+                });
+
+                const data = {
+                    _id: conversation._id,
+                    removedMember: conversation.removedMember,
+                    name: conversation.name,
+                    admin: conversation.admin,
+                    participants: (conversation.participants as UserDocument[]).filter(
+                        (pt) => pt._id.toString() !== user,
+                    ),
+                };
+
+                this.eventGateway.sendNotify({ notify: notify.data, conversation: data }, user);
+            }
+
+            conversation.participants = (conversation.participants as UserDocument[]).filter(
+                (pt) => pt._id.toString() !== userId,
             );
 
             return handleResponse({

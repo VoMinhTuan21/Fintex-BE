@@ -31,7 +31,7 @@ export const handleFriendReqNotiContent = (type: string) => {
 export const handleConvNotiContent = (type: string, convName: string) => {
     switch (type) {
         case 'addMemberConv':
-            return 'đã mời tham gia nhóm chat ' + convName;
+            return 'đã thêm bạn vào nhóm chat ' + convName;
         case 'removeMemberConv':
             return 'đã loại bạn ra khỏi nhóm chat ' + convName;
         default:
